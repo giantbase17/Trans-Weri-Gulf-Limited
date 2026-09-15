@@ -1,0 +1,237 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Trans Weri Gulf Limited — design system
+ * Palette derived from the company logo: deep navy, signal red, field green.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-deep: var(--brand-deep);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-field: var(--field);
+  --color-field-foreground: var(--field-foreground);
+  --color-steel: var(--steel);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-display: "Archivo", "Segoe UI", sans-serif;
+  --font-sans: "Barlow", "Segoe UI", sans-serif;
+}
+
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(0.985 0.004 250);
+  --foreground: oklch(0.19 0.045 268);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.045 268);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.045 268);
+
+  /* Logo navy */
+  --primary: oklch(0.33 0.145 268);
+  --primary-foreground: oklch(0.985 0.005 250);
+  --brand: oklch(0.33 0.145 268);
+  --brand-foreground: oklch(0.985 0.005 250);
+  --brand-deep: oklch(0.19 0.075 268);
+
+  /* Logo red */
+  --signal: oklch(0.56 0.205 27);
+  --signal-foreground: oklch(0.99 0.005 250);
+
+  /* Logo green */
+  --field: oklch(0.6 0.135 155);
+  --field-foreground: oklch(0.99 0.005 250);
+
+  --steel: oklch(0.62 0.02 255);
+
+  --secondary: oklch(0.945 0.012 255);
+  --secondary-foreground: oklch(0.25 0.06 268);
+  --muted: oklch(0.955 0.008 255);
+  --muted-foreground: oklch(0.5 0.03 258);
+  --accent: oklch(0.94 0.03 155);
+  --accent-foreground: oklch(0.28 0.08 160);
+
+  --destructive: oklch(0.56 0.205 27);
+  --destructive-foreground: oklch(0.99 0.005 250);
+
+  --border: oklch(0.9 0.012 255);
+  --input: oklch(0.9 0.012 255);
+  --ring: oklch(0.33 0.145 268);
+
+  --chart-1: oklch(0.33 0.145 268);
+  --chart-2: oklch(0.56 0.205 27);
+  --chart-3: oklch(0.6 0.135 155);
+  --chart-4: oklch(0.72 0.15 75);
+  --chart-5: oklch(0.55 0.08 255);
+
+  --sidebar: oklch(0.19 0.075 268);
+  --sidebar-foreground: oklch(0.93 0.02 255);
+  --sidebar-primary: oklch(0.56 0.205 27);
+  --sidebar-primary-foreground: oklch(0.99 0.005 250);
+  --sidebar-accent: oklch(0.27 0.09 268);
+  --sidebar-accent-foreground: oklch(0.97 0.01 255);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.6 0.135 155);
+
+  --gradient-hero: linear-gradient(
+    135deg,
+    oklch(0.19 0.075 268) 0%,
+    oklch(0.28 0.12 268) 55%,
+    oklch(0.36 0.09 200) 100%
+  );
+  --gradient-signal: linear-gradient(
+    120deg,
+    oklch(0.56 0.205 27) 0%,
+    oklch(0.62 0.19 45) 100%
+  );
+  --gradient-field: linear-gradient(
+    120deg,
+    oklch(0.6 0.135 155) 0%,
+    oklch(0.33 0.145 268) 100%
+  );
+  --shadow-lift: 0 18px 45px -22px oklch(0.19 0.075 268 / 0.55);
+  --shadow-glow:
+    0 0 0 1px oklch(0.33 0.145 268 / 0.08),
+    0 24px 60px -30px oklch(0.19 0.075 268 / 0.7);
+}
+
+.dark {
+  --background: oklch(0.16 0.035 268);
+  --foreground: oklch(0.96 0.008 250);
+  --card: oklch(0.21 0.05 268);
+  --card-foreground: oklch(0.96 0.008 250);
+  --popover: oklch(0.21 0.05 268);
+  --popover-foreground: oklch(0.96 0.008 250);
+  --primary: oklch(0.72 0.13 250);
+  --primary-foreground: oklch(0.16 0.035 268);
+  --secondary: oklch(0.26 0.05 268);
+  --secondary-foreground: oklch(0.96 0.008 250);
+  --muted: oklch(0.26 0.05 268);
+  --muted-foreground: oklch(0.72 0.03 255);
+  --accent: oklch(0.3 0.07 160);
+  --accent-foreground: oklch(0.96 0.008 250);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.6 0.135 155);
+}
+
+@utility bg-hero-gradient {
+  background-image: var(--gradient-hero);
+}
+
+@utility bg-signal-gradient {
+  background-image: var(--gradient-signal);
+}
+
+@utility bg-field-gradient {
+  background-image: var(--gradient-field);
+}
+
+@utility shadow-lift {
+  box-shadow: var(--shadow-lift);
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+@utility text-balance-tight {
+  letter-spacing: -0.02em;
+}
+
+@utility hazard-stripe {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--signal) 0 14px,
+    transparent 14px 28px
+  );
+}
+
+@utility grain-overlay {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image: radial-gradient(oklch(1 0 0 / 0.35) 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+}
+
+@utility reveal-up {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+}
