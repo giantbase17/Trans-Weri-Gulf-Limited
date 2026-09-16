@@ -1,5 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type EquipmentCategory = {
+  id: string;
+  value: string;
+  label: string;
+  sort_order: number;
+  created_at: string;
+};
+
 export type Equipment = {
   id: string;
   name: string;
@@ -66,9 +74,12 @@ export type Enquiry = {
   internal_notes: string | null;
   quantity: number;
   transaction_type: string;
+  service_type: string;
   unit_price: number | null;
   total_value: number | null;
   currency: string;
+  preferred_contact: string | null;
+  duration_days: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -105,6 +116,7 @@ export type SitePost = {
   excerpt: string;
   body: string | null;
   image_url: string | null;
+  link_url: string | null;
   publish_date: string;
   published: boolean;
   created_at: string;
@@ -197,7 +209,44 @@ export async function deleteSitePost(id: string) {
   if (error) throw error;
 }
 
+/**
+ * Re-encodes an uploaded image to WebP in the browser before it ever leaves
+ * the device, so every new upload lands in storage already space-efficient.
+ * SVGs (need to stay scalable) and GIFs (would lose animation) pass through
+ * untouched; anything already WebP is left alone too.
+ */
+async function toWebp(file: File, quality = 0.82): Promise<File> {
+  if (
+    !file.type.startsWith("image/") ||
+    file.type === "image/webp" ||
+    file.type === "image/svg+xml" ||
+    file.type === "image/gif"
+  ) {
+    return file;
+  }
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", quality),
+    );
+    if (!blob) return file;
+    const newName = file.name.replace(/\.[^./\\]+$/, "") + ".webp";
+    return new File([blob], newName, { type: "image/webp" });
+  } catch {
+    // Conversion failed (unsupported format, corrupt file, etc.) — fall
+    // back to uploading the original rather than blocking the admin.
+    return file;
+  }
+}
+
 export async function uploadSiteAsset(file: File, prefix: string) {
+  file = await toWebp(file);
   const path = `${prefix}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
   const { error } = await sb.storage
     .from("site-assets")
@@ -208,6 +257,49 @@ export async function uploadSiteAsset(file: File, prefix: string) {
     .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
   if (signErr) throw signErr;
   return data.signedUrl as string;
+}
+
+export async function fetchEquipmentCategories(): Promise<EquipmentCategory[]> {
+  const { data, error } = await sb
+    .from("equipment_categories")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as EquipmentCategory[];
+}
+
+export async function addEquipmentCategory(label: string): Promise<EquipmentCategory> {
+  const value = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (!value) throw new Error("Enter a category name");
+  const { data, error } = await sb
+    .from("equipment_categories")
+    .insert({ value, label: label.trim() })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as EquipmentCategory;
+}
+
+/** Renames the display label only — the stable `value` (and every
+ * equipment row referencing it) is untouched. */
+export async function renameEquipmentCategory(id: string, label: string) {
+  if (!label.trim()) throw new Error("Enter a category name");
+  const { error } = await sb
+    .from("equipment_categories")
+    .update({ label: label.trim() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+/** Fails with a foreign-key error if any equipment still uses this
+ * category — callers should surface that as "still in use". */
+export async function deleteEquipmentCategory(id: string) {
+  const { error } = await sb.from("equipment_categories").delete().eq("id", id);
+  if (error) throw error;
 }
 
 export async function fetchAllEquipmentAdmin(): Promise<Equipment[]> {
@@ -333,6 +425,7 @@ export async function removeEquipmentImage(id: string) {
 
 /** Uploads a photo to the private bucket and returns a long-lived signed URL. */
 export async function uploadEquipmentPhoto(file: File, slug: string) {
+  file = await toWebp(file);
   const path = `${slug}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
   const { error } = await sb.storage
     .from("equipment-photos")
@@ -450,20 +543,37 @@ export async function deleteUser(userId: string) {
  * calls a server-side function that creates the auth user, assigns their
  * role, and emails them a one-time link to set their own password.
  */
-export async function inviteUser(params: {
+export async function createUserAccount(params: {
   email: string;
+  password: string;
   fullName?: string;
   role: string;
 }) {
-  const { error } = await supabase.functions.invoke("invite-user", {
+  const { error } = await supabase.functions.invoke("create-user", {
     body: {
       email: params.email,
+      password: params.password,
       fullName: params.fullName,
       role: params.role,
-      siteUrl: typeof window === "undefined" ? "" : window.location.origin,
     },
   });
-  if (error) throw error;
+  if (error) {
+    // supabase-js only sets a generic "non-2xx status code" message on
+    // FunctionsHttpError; the actual reason is in the response body, which
+    // the SDK leaves for callers to read themselves.
+    const context = (error as { context?: Response }).context;
+    let detail: string | undefined;
+    if (context && typeof context.clone === "function") {
+      try {
+        const body = await context.clone().json();
+        const candidate = body?.error ?? body?.msg ?? body?.message;
+        if (typeof candidate === "string") detail = candidate;
+      } catch {
+        // response body wasn't JSON; fall back to the generic message
+      }
+    }
+    throw new Error(detail ?? error.message);
+  }
 }
 
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>) {

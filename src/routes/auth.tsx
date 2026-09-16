@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { site } from "@/lib/site";
 import { bootstrapAdmin, fetchMyRoles } from "@/lib/db";
+import { getSiteUrl } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/auth")({
@@ -91,10 +92,8 @@ function AuthPage() {
         return;
       }
 
-      const emailRedirectTo =
-        typeof window === "undefined"
-          ? undefined
-          : `${window.location.origin}/auth`;
+      const siteUrl = getSiteUrl();
+      const emailRedirectTo = siteUrl ? `${siteUrl}/auth` : undefined;
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
@@ -155,10 +154,8 @@ function AuthPage() {
       return;
     }
     setBusy(true);
-    const redirectTo =
-      typeof window === "undefined"
-        ? undefined
-        : `${window.location.origin}/auth`;
+    const siteUrl = getSiteUrl();
+    const redirectTo = siteUrl ? `${siteUrl}/auth` : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
       redirectTo ? { redirectTo } : {},

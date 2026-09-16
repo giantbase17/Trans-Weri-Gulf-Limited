@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import {
@@ -11,6 +12,7 @@ import {
   Check,
   CheckCircle2,
   ChevronRight,
+  DollarSign,
   Eye,
   EyeOff,
   FileDown,
@@ -25,18 +27,38 @@ import {
   Newspaper,
   Package,
   Pencil,
+  Percent,
   Plus,
   RefreshCw,
   Search,
   Send,
   ShieldAlert,
   Trash2,
+  Truck,
   Users,
   Wrench,
   X,
 } from "lucide-react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  addEquipmentCategory,
+  deleteEquipmentCategory,
+  renameEquipmentCategory,
   addEquipmentImage,
   assignRole,
   createEnquiry,
@@ -47,12 +69,15 @@ import {
   deleteUser,
   fetchAllEquipmentAdmin,
   fetchAllUsers,
+  fetchEquipmentCategories,
+  fetchEquipmentImages,
   fetchEquipmentList,
   fetchCustomers,
   fetchEnquiries,
   fetchSitePosts,
   fetchSiteSettings,
-  inviteUser,
+  createUserAccount,
+  removeEquipmentImage,
   removeRole,
   saveEquipment,
   saveSitePost,
@@ -64,24 +89,31 @@ import {
   uploadSiteAsset,
   type Customer,
   type Equipment,
+  type EquipmentCategory,
+  type EquipmentImage,
   type Enquiry,
   type SitePost,
   type SiteSettings,
   type UserProfile,
 } from "@/lib/db";
 import {
+  ALL_ROLES,
+  ALL_SERVICE_TYPES,
   CATEGORIES,
   ENQUIRY_STATUSES,
   ENQUIRY_STATUS_TRANSITIONS,
   ROLE_PERMISSIONS,
   STATUSES,
   categoryLabel,
+  equipmentImageUrl,
   formatDualCurrency,
   hasPermission,
+  roleLabel,
+  serviceTypeLabel,
   site,
 } from "@/lib/site";
 import { supabase } from "@/integrations/supabase/client";
-import heroBackground from "@/assests/background.png";
+import heroBackground from "@/assests/background.webp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,14 +123,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthShell } from "@/components/site/AuthShell";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ContentPanel } from "@/components/site/ContentPanel";
-import { cn, getErrorMessage } from "@/lib/utils";
+import { cn, getErrorMessage, getSiteUrl } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/")({
   head: () => ({ meta: [{ title: `Admin | ${site.name}` }] }),
   component: AdminPage,
 });
 
-type Tab = "overview" | "equipment" | "enquiries" | "customers" | "users" | "content";
+type Tab = "overview" | "equipment" | "enquiries" | "customers" | "analytics" | "users" | "content";
 
 const emptyEquipment: Partial<Equipment> = {
   name: "",
@@ -225,9 +257,12 @@ const previewEnquiries: Enquiry[] = [
     internal_notes: null,
     quantity: 1,
     transaction_type: "rental",
+    service_type: "equipment_rental",
     unit_price: null,
     total_value: null,
     currency: "NGN",
+    preferred_contact: "whatsapp",
+    duration_days: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -256,6 +291,7 @@ const previewPosts: SitePost[] = [
       "We are expanding our mobilisation support for contractors working across Bayelsa, riverine communities and the wider Niger Delta.",
     body: null,
     image_url: null,
+    link_url: null,
     publish_date: "2026-09-03",
     published: true,
     created_at: new Date().toISOString(),
@@ -270,6 +306,7 @@ const previewPosts: SitePost[] = [
       "A practical guide to matching excavators, dozers and support equipment to access, ground conditions and programme demands.",
     body: null,
     image_url: null,
+    link_url: null,
     publish_date: "2026-08-28",
     published: true,
     created_at: new Date().toISOString(),
@@ -284,6 +321,7 @@ const previewPosts: SitePost[] = [
       "Ask our team about upcoming crane and dredging equipment availability so we can reserve capacity for your next project.",
     body: null,
     image_url: null,
+    link_url: null,
     publish_date: new Date().toISOString().slice(0, 10),
     published: true,
     created_at: new Date().toISOString(),
@@ -307,7 +345,20 @@ function AdminPage() {
 function LoadingScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-deep text-primary-foreground">
-      Loading workspace...
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col items-center gap-4"
+      >
+        <motion.span
+          className="h-10 w-10 rounded-full border-2 border-primary-foreground/25 border-t-enterprise-gold"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+        />
+        <p className="text-sm font-semibold text-primary-foreground/70">
+          Loading workspace...
+        </p>
+      </motion.div>
     </div>
   );
 }
@@ -366,10 +417,8 @@ function LoginScreen() {
       return;
     }
     setResetting(true);
-    const redirectTo =
-      typeof window === "undefined"
-        ? undefined
-        : `${window.location.origin}/auth`;
+    const siteUrl = getSiteUrl();
+    const redirectTo = siteUrl ? `${siteUrl}/auth` : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
       redirectTo ? { redirectTo } : {},
@@ -384,9 +433,15 @@ function LoginScreen() {
 
   return (
     <AuthShell>
-      <Card className="w-full max-w-md border-none bg-background text-foreground shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" as const }}
+        className="w-full max-w-md"
+      >
+      <Card className="border-none bg-background text-foreground shadow-2xl">
         <CardContent className="p-8">
-          <span className="block h-1 w-10 rounded-full bg-signal" />
+          <span className="block h-1 w-10 rounded-full bg-enterprise-gold" />
           <h2 className="mt-4 text-3xl font-extrabold">Welcome back</h2>
           <p className="mt-1 text-muted-foreground">
             Sign in to manage your fleet operations
@@ -503,6 +558,7 @@ function LoginScreen() {
           </div>
         </CardContent>
       </Card>
+      </motion.div>
     </AuthShell>
   );
 }
@@ -511,7 +567,7 @@ function AccessDenied({ onSignOut }: { onSignOut: () => Promise<unknown> }) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <ShieldAlert className="mx-auto h-12 w-12 text-signal" />
+        <ShieldAlert className="mx-auto h-12 w-12 text-enterprise-gold" />
         <h1 className="mt-5 text-3xl">Staff access required</h1>
         <p className="mt-3 text-muted-foreground">
           Your account is authenticated, but it has no Trans Weri Gulf staff
@@ -529,6 +585,48 @@ function AccessDenied({ onSignOut }: { onSignOut: () => Promise<unknown> }) {
   );
 }
 
+const ROLE_BADGE_STYLES: Record<string, string> = {
+  super_admin: "bg-enterprise-gold/15 text-enterprise-gold",
+  admin: "bg-enterprise-royal/15 text-enterprise-royal",
+  manager: "bg-field/15 text-field",
+  sales_manager: "bg-violet-500/15 text-violet-600",
+  equipment_manager: "bg-teal-500/15 text-teal-600",
+  staff: "bg-sky-500/15 text-sky-600",
+};
+
+function RoleBadges({ roles }: { roles: string[] }) {
+  if (roles.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {roles.map((role) => (
+        <span
+          key={role}
+          className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${ROLE_BADGE_STYLES[role] ?? "bg-secondary text-secondary-foreground"}`}
+        >
+          {roleLabel(role)}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Ticks every 30s so a greeting reflects the actual current time of day
+ * without needing a page refresh. */
+function useLiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+function greetingForHour(hour: number) {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 function Dashboard({
   auth,
   preview = false,
@@ -536,6 +634,11 @@ function Dashboard({
   auth: ReturnType<typeof useAuth>;
   preview?: boolean;
 }) {
+  const now = useLiveClock();
+  const displayName =
+    (auth.user?.user_metadata as { full_name?: string } | undefined)?.full_name?.trim() ||
+    auth.user?.email?.split("@")[0] ||
+    "there";
   const [tab, setTab] = useState<Tab>("overview");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Partial<Equipment> | null>(null);
@@ -662,15 +765,20 @@ function Dashboard({
       <aside className="w-full border-b border-border bg-brand-deep text-primary-foreground lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-b-0">
         <div className="flex items-center justify-between px-5 py-5 lg:block">
           <img
-            src={site.logo}
-            alt={site.name}
-            className="h-12 w-fit rounded bg-background p-1"
+            src={settings.data?.logo_url ?? site.logo}
+            alt={settings.data?.company_name ?? site.name}
+            className="h-16 w-fit max-w-[220px] rounded bg-background p-1.5 object-contain"
           />
           <div className="hidden lg:block">
             <p className="mt-5 text-lg font-bold">Fleet control</p>
             <p className="mt-1 text-xs text-primary-foreground/60">
               {preview ? "Preview mode · sample data" : auth.user?.email}
             </p>
+            {!preview && (
+              <div className="mt-2">
+                <RoleBadges roles={auth.roles} />
+              </div>
+            )}
           </div>
           <button
             className="lg:hidden"
@@ -693,6 +801,7 @@ function Dashboard({
               ["equipment", "Equipment", Package, permissions.canManageEquipment || permissions.canViewAll],
               ["enquiries", "Enquiries", Send, permissions.canManageEnquiries || permissions.canViewAll],
               ["customers", "Customers", Users, permissions.canManageCustomers || permissions.canViewAll],
+              ["analytics", "Analytics", BarChart3, permissions.canViewAll],
               ["users", "Users & Roles", ShieldAlert, permissions.canManageUsers],
               ["content", "Site content", Newspaper, permissions.canManageContent],
             ] as const
@@ -700,13 +809,20 @@ function Dashboard({
             <button
               key={value}
               onClick={() => setTab(value)}
-              className={`flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors lg:mb-1 lg:w-full ${tab === value ? "bg-signal text-signal-foreground" : "text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}
+              className={`relative flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors lg:mb-1 lg:w-full ${tab === value ? "text-enterprise-gold-foreground" : "text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"}`}
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              {tab === value && (
+                <motion.span
+                  layoutId="admin-nav-active"
+                  transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  className="absolute inset-0 rounded-md bg-enterprise-gold"
+                />
+              )}
+              <Icon className="relative h-4 w-4" />
+              <span className="relative">{label}</span>
               {value === "enquiries" &&
                 requests.filter((e) => e.status === "new").length > 0 && (
-                  <span className="ml-auto rounded-full bg-field px-2 py-0.5 text-xs text-field-foreground">
+                  <span className="relative ml-auto rounded-full bg-field px-2 py-0.5 text-xs text-field-foreground">
                     {requests.filter((e) => e.status === "new").length}
                   </span>
                 )}
@@ -731,7 +847,7 @@ function Dashboard({
             />
             <div className="absolute inset-0 bg-gradient-to-t from-brand-deep via-brand-deep/70 to-brand-deep/20" />
             <div className="absolute inset-x-0 bottom-0 px-5 pb-5">
-              <span className="mb-2 block h-0.5 w-8 bg-signal" />
+              <span className="mb-2 block h-0.5 w-8 bg-enterprise-gold" />
               <p className="text-xs font-semibold leading-snug text-primary-foreground/85">
                 Built for a stronger Nigeria&apos;s infrastructure
               </p>
@@ -743,7 +859,19 @@ function Dashboard({
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-signal">
+              {tab === "overview" && (
+                <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-sky-600">
+                  {greetingForHour(now.getHours())}, {displayName}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ·{" "}
+                    {now.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </p>
+              )}
+              <p className="mt-2 text-xs font-bold uppercase tracking-[0.2em] text-enterprise-gold">
                 {site.addressShort}
               </p>
               <h1 className="mt-2 text-3xl sm:text-4xl">
@@ -771,68 +899,85 @@ function Dashboard({
               </Button>
             </div>
           </div>
-          {tab === "overview" && (
-            <Overview
-              stats={stats}
-              enquiries={requests}
-              equipment={items}
-              onEnquiries={goToEnquiries}
-              onEquipment={() => setTab("equipment")}
-            />
-          )}
-          {tab === "equipment" && (
-            <EquipmentPanel
-              items={items}
-              onNew={permissions.canManageEquipment ? openNew : undefined}
-              onEdit={permissions.canManageEquipment ? openEdit : undefined}
-              onDelete={permissions.canManageEquipment ? async (id) => {
-                await deleteEquipment(id);
-                refresh();
-                toast.success("Equipment deleted");
-              } : undefined}
-              readOnly={!permissions.canManageEquipment}
-            />
-          )}
-          {tab === "enquiries" && (
-            <EnquiriesPanel
-              enquiries={requests}
-              users={users.data ?? []}
-              preview={preview}
-              onSaved={refresh}
-              canManage={permissions.canManageEnquiries}
-              initialQuickFilter={enquiryQuickFilter}
-            />
-          )}
-          {tab === "customers" && (
-            <CustomersPanel
-              customers={customers.data ?? []}
-              enquiries={enquiries.data ?? []}
-              onSaved={() => {
-                void queryClient.invalidateQueries({
-                  queryKey: ["customers", "admin"],
-                });
-              }}
-              canManage={permissions.canManageCustomers}
-            />
-          )}
-          {tab === "users" && (
-            <UsersPanel
-              users={users.data ?? []}
-              currentUser={auth.user?.id}
-              onSaved={() => {
-                void queryClient.invalidateQueries({
-                  queryKey: ["users", "admin"],
-                });
-              }}
-            />
-          )}
-          {tab === "content" && (
-            <ContentPanel
-              settings={settings.data}
-              posts={posts.data ?? []}
-              onSaved={refresh}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: "easeOut" as const }}
+            >
+              {tab === "overview" && (
+                <Overview
+                  stats={stats}
+                  enquiries={requests}
+                  equipment={items}
+                  onEnquiries={goToEnquiries}
+                  onEquipment={() => setTab("equipment")}
+                />
+              )}
+              {tab === "equipment" && (
+                <EquipmentPanel
+                  items={items}
+                  onNew={permissions.canManageEquipment ? openNew : undefined}
+                  onEdit={permissions.canManageEquipment ? openEdit : undefined}
+                  onDelete={permissions.canManageEquipment ? async (id) => {
+                    await deleteEquipment(id);
+                    refresh();
+                    toast.success("Equipment deleted");
+                  } : undefined}
+                  readOnly={!permissions.canManageEquipment}
+                />
+              )}
+              {tab === "enquiries" && (
+                <EnquiriesPanel
+                  enquiries={requests}
+                  users={users.data ?? []}
+                  preview={preview}
+                  onSaved={refresh}
+                  canManage={permissions.canManageEnquiries}
+                  initialQuickFilter={enquiryQuickFilter}
+                />
+              )}
+              {tab === "customers" && (
+                <CustomersPanel
+                  customers={customers.data ?? []}
+                  enquiries={enquiries.data ?? []}
+                  onSaved={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ["customers", "admin"],
+                    });
+                  }}
+                  canManage={permissions.canManageCustomers}
+                />
+              )}
+              {tab === "analytics" && (
+                <AnalyticsPanel
+                  equipment={items}
+                  enquiries={requests}
+                  customers={customers.data ?? []}
+                />
+              )}
+              {tab === "users" && (
+                <UsersPanel
+                  users={users.data ?? []}
+                  currentUser={auth.user?.id}
+                  onSaved={() => {
+                    void queryClient.invalidateQueries({
+                      queryKey: ["users", "admin"],
+                    });
+                  }}
+                />
+              )}
+              {tab === "content" && (
+                <ContentPanel
+                  settings={settings.data}
+                  posts={posts.data ?? []}
+                  onSaved={refresh}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </main>
       {showForm && (
@@ -851,8 +996,8 @@ function Dashboard({
 
 const enquiryStatusStyles: Record<string, string> = {
   new: "bg-brand/10 text-brand",
-  contacted: "bg-signal/10 text-signal",
-  quoted: "bg-signal/10 text-signal",
+  contacted: "bg-enterprise-gold/10 text-enterprise-gold",
+  quoted: "bg-enterprise-gold/10 text-enterprise-gold",
   won: "bg-field/10 text-field",
   lost: "bg-secondary text-muted-foreground",
 };
@@ -864,6 +1009,35 @@ function formatShortDate(value: string) {
     year: "numeric",
   });
 }
+
+/** Counts up to `value` on mount/change instead of popping in — used for
+ * every KPI figure across the dashboard so the numbers feel alive rather
+ * than static text. */
+function AnimatedNumber({ value }: { value: number }) {
+  const motionValue = useMotionValue(0);
+  const spring = useSpring(motionValue, { stiffness: 90, damping: 20 });
+  const display = useTransform(spring, (v) => Math.round(v).toLocaleString());
+
+  useEffect(() => {
+    motionValue.set(value);
+  }, [motionValue, value]);
+
+  return <motion.span>{display}</motion.span>;
+}
+
+const fadeUpContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const fadeUpItem = {
+  hidden: { opacity: 0, y: 14 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" as const },
+  },
+};
 
 function Overview({
   stats,
@@ -887,7 +1061,7 @@ function Overview({
   const cards = [
     ["Total units", stats.units, Package, "text-brand", "bg-brand/10"],
     ["Available", stats.available, CheckCircle2, "text-field", "bg-field/10"],
-    ["Rented out", stats.rented, BarChart3, "text-signal", "bg-signal/10"],
+    ["Rented out", stats.rented, BarChart3, "text-enterprise-royal", "bg-enterprise-royal/10"],
     ["Maintenance", stats.maintenance, Wrench, "text-steel", "bg-steel/10"],
   ] as const;
   const lowStock = equipment
@@ -922,8 +1096,8 @@ function Overview({
       "Awaiting response",
       awaiting,
       AlertTriangle,
-      "text-signal",
-      "bg-signal/10",
+      "text-enterprise-gold",
+      "bg-enterprise-gold/10",
       "awaiting",
     ],
     [
@@ -946,10 +1120,18 @@ function Overview({
 
   return (
     <>
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <motion.div
+        variants={fadeUpContainer}
+        initial="hidden"
+        animate="show"
+        className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
         {leadCards.map(([label, value, Icon, color, bg, filter]) => (
-          <button
+          <motion.button
             key={label}
+            variants={fadeUpItem}
+            whileHover={{ y: -3 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => onEnquiries(filter)}
             className="text-left"
           >
@@ -962,31 +1144,47 @@ function Overview({
                 </span>
                 <div>
                   <p className="text-sm text-muted-foreground">{label}</p>
-                  <p className="mt-1 text-3xl font-extrabold">{value}</p>
+                  <p className="mt-1 text-3xl font-extrabold">
+                    <AnimatedNumber value={value} />
+                  </p>
                 </div>
               </CardContent>
             </Card>
-          </button>
+          </motion.button>
         ))}
-      </div>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      </motion.div>
+      <motion.div
+        variants={fadeUpContainer}
+        initial="hidden"
+        animate="show"
+        className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
         {cards.map(([label, value, Icon, color, bg]) => (
-          <Card key={label}>
-            <CardContent className="flex items-center gap-4 p-5">
-              <span
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${bg} ${color}`}
-              >
-                <Icon className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-sm text-muted-foreground">{label}</p>
-                <p className="mt-1 text-3xl font-extrabold">{value}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <motion.div key={label} variants={fadeUpItem} whileHover={{ y: -3 }}>
+            <Card>
+              <CardContent className="flex items-center gap-4 p-5">
+                <span
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${bg} ${color}`}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm text-muted-foreground">{label}</p>
+                  <p className="mt-1 text-3xl font-extrabold">
+                    <AnimatedNumber value={value} />
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
-      </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
+        className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"
+      >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -1094,7 +1292,7 @@ function Overview({
                       <span
                         className={
                           e.available_units === 0
-                            ? "font-semibold text-signal"
+                            ? "font-semibold text-amber-800"
                             : "font-semibold text-amber-600"
                         }
                       >
@@ -1128,7 +1326,7 @@ function Overview({
             </CardContent>
           </Card>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }
@@ -1166,7 +1364,7 @@ function EquipmentPanel({
           />
         </div>
         {!readOnly && onNew && (
-          <Button variant="signal" onClick={onNew}>
+          <Button variant="gold" onClick={onNew}>
             <Plus className="h-4 w-4" /> Add equipment
           </Button>
         )}
@@ -1217,7 +1415,7 @@ function EquipmentPanel({
                           e.status}
                       </Badge>
                       {!e.published && (
-                        <Badge variant="secondary" className="text-signal">
+                        <Badge variant="secondary" className="text-enterprise-gold">
                           Draft
                         </Badge>
                       )}
@@ -1243,7 +1441,7 @@ function EquipmentPanel({
                             onClick={() => setPendingDelete(e)}
                             aria-label={`Delete ${e.name}`}
                           >
-                            <Trash2 className="h-4 w-4 text-signal" />
+                            <Trash2 className="h-4 w-4 text-enterprise-navy" />
                           </Button>
                         )}
                       </div>
@@ -1284,6 +1482,162 @@ function EquipmentForm({
   const [form, setForm] = useState<Partial<Equipment>>(initial);
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryLabel, setNewCategoryLabel] = useState("");
+  const [managingCategories, setManagingCategories] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null,
+  );
+  const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
+  const queryClient = useQueryClient();
+  const equipmentId = form.id;
+  const MAX_PHOTOS = 4;
+  const { data: categories } = useQuery({
+    queryKey: ["equipment-categories"],
+    queryFn: fetchEquipmentCategories,
+  });
+  const { data: images = [] } = useQuery({
+    queryKey: ["equipment-images", equipmentId],
+    queryFn: () => fetchEquipmentImages(equipmentId!),
+    enabled: !!equipmentId,
+  });
+
+  function refetchImages() {
+    return queryClient.invalidateQueries({
+      queryKey: ["equipment-images", equipmentId],
+    });
+  }
+
+  async function handleSelectPhotos(selected: File[]) {
+    if (selected.length === 0) return;
+    if (!equipmentId) {
+      // Brand-new equipment has no id yet — queue photos, uploaded once
+      // the record is created on submit.
+      const room = MAX_PHOTOS - files.length;
+      if (room <= 0) {
+        toast.error(`You can add up to ${MAX_PHOTOS} photos.`);
+        return;
+      }
+      if (selected.length > room) {
+        toast.error(`Only ${room} more photo(s) allowed (max ${MAX_PHOTOS}).`);
+      }
+      setFiles((prev) => [...prev, ...selected.slice(0, room)]);
+      return;
+    }
+
+    const room = MAX_PHOTOS - images.length;
+    if (room <= 0) {
+      toast.error(`This equipment already has the maximum of ${MAX_PHOTOS} photos.`);
+      return;
+    }
+    if (selected.length > room) {
+      toast.error(`Only ${room} more photo(s) allowed (max ${MAX_PHOTOS}).`);
+    }
+    setUploadingPhoto(true);
+    try {
+      let nextSortOrder = images.length;
+      for (const file of selected.slice(0, room)) {
+        const url = await uploadEquipmentPhoto(file, form.slug || equipmentId);
+        await addEquipmentImage(equipmentId, url, nextSortOrder++);
+        if (!form.primary_image_url) {
+          await updateEquipment(equipmentId, { primary_image_url: url });
+          set("primary_image_url", url);
+        }
+      }
+      await refetchImages();
+      toast.success("Photo added");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not upload photo"));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  async function handleDeletePhoto(image: EquipmentImage) {
+    try {
+      await removeEquipmentImage(image.id);
+      if (form.primary_image_url === image.url) {
+        const nextPrimary =
+          images.find((i) => i.id !== image.id)?.url ?? null;
+        await updateEquipment(equipmentId!, { primary_image_url: nextPrimary });
+        set("primary_image_url", nextPrimary);
+      }
+      await refetchImages();
+      toast.success("Photo removed");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not remove photo"));
+    }
+  }
+
+  async function handleSetPrimaryPhoto(image: EquipmentImage) {
+    try {
+      await updateEquipment(equipmentId!, { primary_image_url: image.url });
+      set("primary_image_url", image.url);
+      toast.success("Cover photo updated");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not set cover photo"));
+    }
+  }
+
+  async function handleAddCategory() {
+    if (!newCategoryLabel.trim()) {
+      toast.error("Enter a category name");
+      return;
+    }
+    try {
+      const created = await addEquipmentCategory(newCategoryLabel);
+      await queryClient.invalidateQueries({ queryKey: ["equipment-categories"] });
+      set("category", created.value);
+      setNewCategoryLabel("");
+      setAddingCategory(false);
+      toast.success(`Added "${created.label}" category`);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not add category",
+      );
+    }
+  }
+
+  async function handleRenameCategory(id: string) {
+    if (!editingCategoryLabel.trim()) {
+      toast.error("Enter a category name");
+      return;
+    }
+    try {
+      await renameEquipmentCategory(id, editingCategoryLabel);
+      await queryClient.invalidateQueries({
+        queryKey: ["equipment-categories"],
+      });
+      setEditingCategoryId(null);
+      toast.success("Category renamed");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not rename category",
+      );
+    }
+  }
+
+  async function handleDeleteCategory(id: string, label: string) {
+    if (
+      !window.confirm(
+        `Delete the "${label}" category? This only works if no equipment is currently assigned to it.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteEquipmentCategory(id);
+      await queryClient.invalidateQueries({
+        queryKey: ["equipment-categories"],
+      });
+      toast.success(`Deleted "${label}"`);
+    } catch {
+      toast.error(
+        `"${label}" is still assigned to equipment — move them to another category first.`,
+      );
+    }
+  }
   // Kept as free-typed text, independent of the parsed object below — a
   // textarea whose value is re-derived from a lossy parse of its own
   // onChange output erases whatever you're mid-typing (e.g. a line with no
@@ -1338,7 +1692,7 @@ function EquipmentForm({
       <Card className="mx-auto my-8 max-w-3xl">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-signal">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-enterprise-gold">
               Fleet record
             </p>
             <CardTitle className="mt-1">
@@ -1374,17 +1728,135 @@ function EquipmentForm({
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <select
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                value={form.category ?? "others"}
-                onChange={(e) => set("category", e.target.value)}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+              {!addingCategory ? (
+                <div className="flex gap-2">
+                  <select
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={form.category ?? "others"}
+                    onChange={(e) => set("category", e.target.value)}
+                  >
+                    {(categories ?? CATEGORIES).map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    title="Add new category"
+                    onClick={() => setAddingCategory(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    title="Manage categories"
+                    onClick={() => setManagingCategories((v) => !v)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newCategoryLabel}
+                    onChange={(e) => setNewCategoryLabel(e.target.value)}
+                    placeholder="e.g. Compactors"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleAddCategory();
+                      }
+                    }}
+                  />
+                  <Button type="button" onClick={() => void handleAddCategory()}>
+                    Add
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setAddingCategory(false);
+                      setNewCategoryLabel("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
+              {managingCategories && (
+                <div className="mt-2 space-y-1.5 rounded-md border p-2">
+                  {(categories ?? []).map((c) => (
+                    <div key={c.id} className="flex items-center gap-2">
+                      {editingCategoryId === c.id ? (
+                        <>
+                          <Input
+                            autoFocus
+                            value={editingCategoryLabel}
+                            onChange={(e) =>
+                              setEditingCategoryLabel(e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void handleRenameCategory(c.id);
+                              }
+                            }}
+                            className="h-8 text-sm"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => void handleRenameCategory(c.id)}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEditingCategoryId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-sm">{c.label}</span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            title="Rename"
+                            onClick={() => {
+                              setEditingCategoryId(c.id);
+                              setEditingCategoryLabel(c.label);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            title="Delete"
+                            onClick={() =>
+                              void handleDeleteCategory(c.id, c.label)
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-enterprise-navy" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Brand</Label>
@@ -1608,21 +2080,104 @@ function EquipmentForm({
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label className="flex items-center gap-2">
-                <ImagePlus className="h-4 w-4" /> Equipment photos
+                <ImagePlus className="h-4 w-4" /> Equipment photos (
+                {equipmentId ? images.length : files.length}/{MAX_PHOTOS})
               </Label>
+
+              {(images.length > 0 || files.length > 0) && (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {images.map((image) => {
+                    const isPrimary = form.primary_image_url === image.url;
+                    return (
+                      <div
+                        key={image.id}
+                        className="group relative aspect-square overflow-hidden rounded-md border"
+                      >
+                        <img
+                          src={equipmentImageUrl(image.url) ?? undefined}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        {isPrimary && (
+                          <span className="absolute left-1 top-1 rounded-full bg-enterprise-gold px-2 py-0.5 text-[10px] font-bold uppercase text-enterprise-gold-foreground">
+                            Cover
+                          </span>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 flex justify-center gap-1 bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          {!isPrimary && (
+                            <button
+                              type="button"
+                              title="Set as cover photo"
+                              onClick={() => void handleSetPrimaryPhoto(image)}
+                              className="rounded p-1 text-white hover:bg-white/20"
+                            >
+                              <ImagePlus className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            title="Delete photo"
+                            onClick={() => void handleDeletePhoto(image)}
+                            className="rounded p-1 text-white hover:bg-white/20"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {!equipmentId &&
+                    files.map((file, i) => (
+                      <div
+                        key={`${file.name}-${i}`}
+                        className="group relative aspect-square overflow-hidden rounded-md border"
+                      >
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                        {i === 0 && (
+                          <span className="absolute left-1 top-1 rounded-full bg-enterprise-gold px-2 py-0.5 text-[10px] font-bold uppercase text-enterprise-gold-foreground">
+                            Cover
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          title="Remove"
+                          onClick={() =>
+                            setFiles((prev) => prev.filter((_, idx) => idx !== i))
+                          }
+                          className="absolute inset-x-0 bottom-0 flex justify-center bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+
               <Input
                 type="file"
                 accept="image/*"
                 multiple
-                onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
+                disabled={
+                  uploadingPhoto ||
+                  (equipmentId ? images.length : files.length) >= MAX_PHOTOS
+                }
+                onChange={(e) => {
+                  void handleSelectPhotos(Array.from(e.target.files ?? []));
+                  e.target.value = "";
+                }}
               />
               <p className="text-xs text-muted-foreground">
-                {files.length} new photo(s) selected. Photos are stored in
-                Supabase Storage.
+                {uploadingPhoto
+                  ? "Uploading…"
+                  : `Up to ${MAX_PHOTOS} photos. The cover photo is the one shown in listings; the rest only appear on this item's detail page.`}
               </p>
             </div>
             <div className="flex flex-wrap gap-3 sm:col-span-2">
-              <Button type="submit" variant="signal" disabled={busy}>
+              <Button type="submit" variant="gold" disabled={busy}>
                 {busy ? "Saving..." : "Save equipment"}
               </Button>
               <Button type="button" variant="outline" onClick={onClose}>
@@ -1685,6 +2240,7 @@ function EnquiriesPanel({
     useState<EnquiryQuickFilter>(initialQuickFilter);
   const [statusFilter, setStatusFilter] = useState("all");
   const [assigneeFilter, setAssigneeFilter] = useState("all");
+  const [serviceTypeFilter, setServiceTypeFilter] = useState("all");
 
   const matchesQuickFilter = (e: Enquiry) => {
     switch (quickFilter) {
@@ -1707,6 +2263,11 @@ function EnquiriesPanel({
   const filteredEnquiries = enquiries.filter((e) => {
     if (!matchesQuickFilter(e)) return false;
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
+    if (
+      serviceTypeFilter !== "all" &&
+      (e.service_type ?? "equipment_rental") !== serviceTypeFilter
+    )
+      return false;
     if (assigneeFilter === "unassigned" && e.assigned_to) return false;
     if (
       assigneeFilter !== "all" &&
@@ -1718,12 +2279,16 @@ function EnquiriesPanel({
   });
 
   const hasActiveFilters =
-    quickFilter !== "all" || statusFilter !== "all" || assigneeFilter !== "all";
+    quickFilter !== "all" ||
+    statusFilter !== "all" ||
+    assigneeFilter !== "all" ||
+    serviceTypeFilter !== "all";
 
   function clearFilters() {
     setQuickFilter("all");
     setStatusFilter("all");
     setAssigneeFilter("all");
+    setServiceTypeFilter("all");
   }
 
   async function addEnquiry(event: React.FormEvent<HTMLFormElement>) {
@@ -1776,6 +2341,10 @@ function EnquiriesPanel({
         company,
         equipment_name,
         transaction_type,
+        preferred_contact,
+        start_date,
+        end_date,
+        duration_days,
         quantity,
         status,
         outcome,
@@ -1790,6 +2359,10 @@ function EnquiriesPanel({
         Company: company,
         Equipment: equipment_name,
         Type: transaction_type,
+        "Contact Method": preferred_contact,
+        "Rental Start": start_date,
+        "Rental End": end_date,
+        "Duration (days)": duration_days,
         Quantity: quantity,
         Status: status,
         Outcome: outcome || 'Pending',
@@ -1884,7 +2457,7 @@ function EnquiriesPanel({
     <section className="mt-8">
       <div className="flex justify-end gap-3">
         {canManage && (
-          <Button variant="signal" onClick={() => setShowForm((value) => !value)}>
+          <Button variant="gold" onClick={() => setShowForm((value) => !value)}>
             <Plus className="h-4 w-4" /> Add enquiry
           </Button>
         )}
@@ -1940,6 +2513,18 @@ function EnquiriesPanel({
             </option>
           ))}
         </select>
+        <select
+          value={serviceTypeFilter}
+          onChange={(e) => setServiceTypeFilter(e.target.value)}
+          className="h-9 rounded-md border bg-background px-2 text-sm"
+        >
+          <option value="all">All services</option>
+          {ALL_SERVICE_TYPES.map((s) => (
+            <option key={s} value={s}>
+              {serviceTypeLabel(s)}
+            </option>
+          ))}
+        </select>
         <span className="text-sm text-muted-foreground">
           {filteredEnquiries.length} of {enquiries.length}
         </span>
@@ -1953,7 +2538,7 @@ function EnquiriesPanel({
         )}
       </div>
       {showForm && (
-        <Card className="mt-5 border-signal">
+        <Card className="mt-5 border-enterprise-gold">
           <CardHeader>
             <CardTitle>Add enquiry &amp; customer</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -2017,7 +2602,7 @@ function EnquiriesPanel({
                 />
               </div>
               <div className="flex gap-3 sm:col-span-2">
-                <Button type="submit" variant="signal" disabled={saving}>
+                <Button type="submit" variant="gold" disabled={saving}>
                   {saving ? "Adding..." : "Add enquiry"}
                 </Button>
                 <Button
@@ -2041,6 +2626,8 @@ function EnquiriesPanel({
                 <th className="px-4 py-3">Contact</th>
                 <th className="px-4 py-3">Equipment</th>
                 <th className="px-4 py-3">Type</th>
+                <th className="px-4 py-3">Service</th>
+                <th className="px-4 py-3">Contact Method</th>
                 <th className="px-4 py-3">Quantity</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Outcome</th>
@@ -2068,7 +2655,7 @@ function EnquiriesPanel({
                       <span
                         className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
                           overdue
-                            ? "bg-signal/10 text-signal"
+                            ? "bg-enterprise-gold/10 text-enterprise-gold"
                             : "bg-field/10 text-field"
                         }`}
                       >
@@ -2092,6 +2679,17 @@ function EnquiriesPanel({
                     <Badge variant="secondary">
                       {e.transaction_type || "rental"}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-4">
+                    {serviceTypeLabel(e.service_type ?? "equipment_rental")}
+                  </td>
+                  <td className="px-4 py-4 capitalize">
+                    {e.preferred_contact ?? "—"}
+                    {e.duration_days !== null && (
+                      <p className="text-xs text-muted-foreground">
+                        {e.duration_days} day{e.duration_days === 1 ? "" : "s"}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-4">
                     {e.quantity || 1}
@@ -2172,7 +2770,7 @@ function EnquiriesPanel({
                     {canManage ? (
                       <input
                         type="date"
-                        className={`h-9 rounded-md border bg-background px-2 text-sm ${followUpDue ? "border-signal text-signal" : ""}`}
+                        className={`h-9 rounded-md border bg-background px-2 text-sm ${followUpDue ? "border-enterprise-gold text-enterprise-gold" : ""}`}
                         value={e.next_action_date ?? ""}
                         onChange={(event) =>
                           void handleNextActionChange(
@@ -2184,7 +2782,7 @@ function EnquiriesPanel({
                     ) : (
                       <span
                         className={
-                          followUpDue ? "font-semibold text-signal" : ""
+                          followUpDue ? "font-semibold text-enterprise-gold" : ""
                         }
                       >
                         {e.next_action_date ?? "—"}
@@ -2204,7 +2802,7 @@ function EnquiriesPanel({
                       {canManage && (
                         <button
                           onClick={() => setPendingDelete(e)}
-                          className="text-signal hover:underline"
+                          className="text-enterprise-navy hover:underline"
                         >
                           Delete
                         </button>
@@ -2357,7 +2955,7 @@ function CustomersPanel({
             </div>
             <Button
               type="submit"
-              variant="signal"
+              variant="gold"
               className="w-fit"
               disabled={saving}
             >
@@ -2393,7 +2991,7 @@ function CustomersPanel({
                   {canManage && (
                     <button
                       onClick={() => setPendingDelete(customer)}
-                      className="text-signal hover:underline text-sm"
+                      className="text-enterprise-navy hover:underline text-sm"
                     >
                       Delete
                     </button>
@@ -2434,6 +3032,310 @@ function CustomersPanel({
   );
 }
 
+const CHART_COLORS = {
+  navy: "#071a3d",
+  royal: "#123e7a",
+  gold: "#d4a017",
+  green: "#16a34a",
+  steel: "#94a3b8",
+};
+
+const PIPELINE_STAGES = ["new", "contacted", "quoted", "won", "lost"] as const;
+
+/** Last 6 calendar months as {key: "2026-04", label: "Apr"}, oldest first —
+ * used to bucket created_at timestamps into monthly trend points. */
+function lastSixMonths() {
+  const out: { key: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    out.push({
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("en-GB", { month: "short" }),
+    });
+  }
+  return out;
+}
+
+function AnalyticsPanel({
+  equipment,
+  enquiries,
+  customers,
+}: {
+  equipment: Equipment[];
+  enquiries: Enquiry[];
+  customers: Customer[];
+}) {
+  const totalUnits = equipment.reduce((n, e) => n + e.total_units, 0);
+  const availableUnits = equipment.reduce((n, e) => n + e.available_units, 0);
+  const activeRentals = equipment.reduce((n, e) => n + e.rented_units, 0);
+  const maintenanceUnits = equipment.reduce(
+    (n, e) => n + e.maintenance_units,
+    0,
+  );
+  const wonEnquiries = enquiries.filter((e) => e.status === "won");
+  const revenueNgn = wonEnquiries
+    .filter((e) => e.currency !== "USD")
+    .reduce((n, e) => n + (e.total_value ?? 0), 0);
+  const revenueUsd = wonEnquiries
+    .filter((e) => e.currency === "USD")
+    .reduce((n, e) => n + (e.total_value ?? 0), 0);
+  const quotationsCount = enquiries.filter((e) => e.status === "quoted").length;
+  const pendingCount = enquiries.filter((e) => e.status === "new").length;
+  const closedCount = enquiries.filter((e) =>
+    ["won", "lost"].includes(e.status),
+  ).length;
+  const conversionRate = closedCount
+    ? Math.round((wonEnquiries.length / closedCount) * 100)
+    : 0;
+
+  const kpis = [
+    ["Total equipment", totalUnits, Package, CHART_COLORS.navy],
+    ["Active rentals", activeRentals, Truck, CHART_COLORS.royal],
+    [
+      "Revenue (won deals)",
+      formatDualCurrency(revenueNgn, revenueUsd),
+      DollarSign,
+      CHART_COLORS.gold,
+    ],
+    ["Customers", customers.length, Users, CHART_COLORS.green],
+    ["Quotations", quotationsCount, FileText, CHART_COLORS.royal],
+    ["Pending inquiries", pendingCount, Send, CHART_COLORS.gold],
+    ["Maintenance requests", maintenanceUnits, Wrench, CHART_COLORS.steel],
+    ["Conversion rate", `${conversionRate}%`, Percent, CHART_COLORS.green],
+  ] as const;
+
+  const categoryData = useMemo(() => {
+    const counts = new Map<string, number>();
+    equipment.forEach((e) =>
+      counts.set(e.category, (counts.get(e.category) ?? 0) + 1),
+    );
+    return Array.from(counts.entries()).map(([category, count]) => ({
+      category: categoryLabel(category),
+      count,
+    }));
+  }, [equipment]);
+
+  const statusData = [
+    { name: "Available", value: availableUnits, fill: CHART_COLORS.green },
+    { name: "Rented out", value: activeRentals, fill: CHART_COLORS.royal },
+    {
+      name: "Maintenance",
+      value: maintenanceUnits,
+      fill: CHART_COLORS.steel,
+    },
+  ].filter((d) => d.value > 0);
+
+  const pipelineData = PIPELINE_STAGES.map((status) => ({
+    status: status.charAt(0).toUpperCase() + status.slice(1),
+    count: enquiries.filter((e) => e.status === status).length,
+  }));
+
+  const months = lastSixMonths();
+  const enquiryTrend = months.map((m) => ({
+    label: m.label,
+    Enquiries: enquiries.filter((e) => e.created_at.startsWith(m.key)).length,
+  }));
+  const customerGrowth = months.map((m) => ({
+    label: m.label,
+    Customers: customers.filter((c) => c.created_at.startsWith(m.key)).length,
+  }));
+
+  function exportAnalytics() {
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet([
+        { Metric: "Total equipment", Value: totalUnits },
+        { Metric: "Available units", Value: availableUnits },
+        { Metric: "Active rentals", Value: activeRentals },
+        { Metric: "Maintenance requests", Value: maintenanceUnits },
+        { Metric: "Revenue, won deals (NGN)", Value: revenueNgn },
+        { Metric: "Revenue, won deals (USD)", Value: revenueUsd },
+        { Metric: "Quotations", Value: quotationsCount },
+        { Metric: "Pending inquiries", Value: pendingCount },
+        { Metric: "Conversion rate (%)", Value: conversionRate },
+        { Metric: "Customers", Value: customers.length },
+      ]),
+      "Summary",
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(
+        categoryData.map((d) => ({ Category: d.category, Units: d.count })),
+      ),
+      "Equipment by category",
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(
+        pipelineData.map((d) => ({ Stage: d.status, Count: d.count })),
+      ),
+      "Enquiry pipeline",
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(
+        months.map((m, i) => ({
+          Month: m.label,
+          Enquiries: enquiryTrend[i]?.Enquiries ?? 0,
+          "New customers": customerGrowth[i]?.Customers ?? 0,
+        })),
+      ),
+      "6-month trend",
+    );
+    XLSX.writeFile(workbook, "trans-weri-analytics.xlsx");
+  }
+
+  return (
+    <section className="mt-8 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-enterprise-royal/30 bg-enterprise-royal/5 p-4 text-sm text-muted-foreground">
+        <p>
+          Built entirely from your real equipment, enquiry and customer
+          records — no estimated figures. Project tracking and quotation
+          documents aren&apos;t modules yet, so project-progress analytics
+          aren&apos;t available here.
+        </p>
+        <Button variant="outline" onClick={exportAnalytics}>
+          <FileDown className="h-4 w-4" /> Export Excel
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpis.map(([label, value, Icon, color]) => (
+          <Card key={label}>
+            <CardContent className="flex items-center gap-3 p-4">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: `${color}1A`, color }}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {label}
+                </p>
+                <p className="text-xl font-bold">{value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Equipment by category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={categoryData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="category"
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                  angle={-20}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <RechartsTooltip />
+                <Bar dataKey="count" fill={CHART_COLORS.royal} radius={4} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Fleet status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={2}
+                >
+                  {statusData.map((d) => (
+                    <Cell key={d.name} fill={d.fill} />
+                  ))}
+                </Pie>
+                <RechartsTooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Enquiry pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={pipelineData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="status" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <RechartsTooltip />
+                <Bar dataKey="count" fill={CHART_COLORS.gold} radius={4} />
+              </BarChart>
+            </ResponsiveContainer>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Conversion rate (won ÷ closed): {conversionRate}%
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Enquiries &amp; customer growth (6 months)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  type="category"
+                  allowDuplicatedCategory={false}
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <RechartsTooltip />
+                <Legend />
+                <Line
+                  data={enquiryTrend}
+                  dataKey="Enquiries"
+                  stroke={CHART_COLORS.royal}
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  data={customerGrowth}
+                  dataKey="Customers"
+                  stroke={CHART_COLORS.green}
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </section>
+  );
+}
+
 function UsersPanel({
   users,
   currentUser,
@@ -2446,7 +3348,8 @@ function UsersPanel({
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"admin" | "manager" | "staff">("staff");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<string>("staff");
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<UserProfile | null>(null);
   const [pendingRole, setPendingRole] = useState<{
@@ -2456,33 +3359,37 @@ function UsersPanel({
   } | null>(null);
 
   async function addUser() {
-    if (!newUserEmail) {
-      toast.error("Email is required");
+    if (!newUserEmail || !newUserPassword) {
+      toast.error("Email and password are required");
+      return;
+    }
+    if (newUserPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
       return;
     }
     setBusy(true);
     try {
-      // Invite-only: the server creates the account, assigns the role, and
-      // emails a one-time link — the admin never sets or sees a password.
-      await inviteUser({
+      // The account is created directly with the password given here —
+      // already confirmed, no Supabase verification email or invite link.
+      await createUserAccount({
         email: newUserEmail,
+        password: newUserPassword,
         fullName: newUserName,
         role: newUserRole,
       });
 
-      toast.success(
-        "Invitation sent — they'll receive an email to set their password.",
-      );
+      toast.success("Account created — they can sign in right away.");
 
       setShowAddUser(false);
       setNewUserEmail("");
       setNewUserName("");
+      setNewUserPassword("");
       setNewUserRole("staff");
       onSaved();
     } catch (error) {
-      console.error("Invite user error:", error);
+      console.error("Create user error:", error);
       toast.error(
-        error instanceof Error ? error.message : "Could not send invitation",
+        error instanceof Error ? error.message : "Could not create account",
       );
     } finally {
       setBusy(false);
@@ -2522,18 +3429,18 @@ function UsersPanel({
   return (
     <section className="mt-8">
       <div className="flex justify-end">
-        <Button variant="signal" onClick={() => setShowAddUser(!showAddUser)}>
+        <Button variant="gold" onClick={() => setShowAddUser(!showAddUser)}>
           <Plus className="h-4 w-4" /> Add user
         </Button>
       </div>
 
       {showAddUser && (
-        <Card className="mt-5 border-signal">
+        <Card className="mt-5 border-enterprise-gold">
           <CardHeader>
-            <CardTitle>Invite new user</CardTitle>
+            <CardTitle>Create new user</CardTitle>
             <p className="text-sm text-muted-foreground">
-              They'll receive an email with a link to set their own password
-              — you never see or set it.
+              Set their email and password here — the account is active
+              immediately, no confirmation email required.
             </p>
           </CardHeader>
           <CardContent>
@@ -2557,6 +3464,18 @@ function UsersPanel({
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="new_user_password">Password *</Label>
+                <Input
+                  id="new_user_password"
+                  type="text"
+                  value={newUserPassword}
+                  onChange={(e) => setNewUserPassword(e.target.value)}
+                  minLength={8}
+                  placeholder="At least 8 characters"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="new_user_role">Role *</Label>
                 <select
                   id="new_user_role"
@@ -2564,14 +3483,16 @@ function UsersPanel({
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value as any)}
                 >
-                  <option value="staff">Staff</option>
-                  <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
+                  {ALL_ROLES.map((role) => (
+                    <option key={role} value={role}>
+                      {roleLabel(role)}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="flex gap-3 sm:col-span-2">
-                <Button type="submit" variant="signal" disabled={busy}>
-                  {busy ? "Sending invite..." : "Send invite"}
+                <Button type="submit" variant="gold" disabled={busy}>
+                  {busy ? "Creating account..." : "Create account"}
                 </Button>
                 <Button
                   type="button"
@@ -2622,7 +3543,7 @@ function UsersPanel({
                         ) : (
                           user.roles.map((role) => (
                             <Badge key={role} variant="default">
-                              {role}
+                              {roleLabel(role)}
                             </Badge>
                           ))
                         )}
@@ -2630,7 +3551,7 @@ function UsersPanel({
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {["admin", "manager", "staff"].map((role) => (
+                        {ALL_ROLES.map((role) => (
                           <Button
                             key={role}
                             size="sm"
@@ -2644,14 +3565,17 @@ function UsersPanel({
                                 hasRole: user.roles.includes(role),
                               })
                             }
-                            disabled={user.id === currentUser && role === "admin"}
+                            disabled={
+                              user.id === currentUser &&
+                              (role === "admin" || role === "super_admin")
+                            }
                           >
                             {user.roles.includes(role) ? (
                               <Check className="h-3 w-3" />
                             ) : (
                               <Plus className="h-3 w-3" />
                             )}{" "}
-                            {role}
+                            {roleLabel(role)}
                           </Button>
                         ))}
                       </div>
@@ -2662,7 +3586,7 @@ function UsersPanel({
                           size="sm"
                           variant="ghost"
                           onClick={() => setPendingDelete(user)}
-                          className="text-signal hover:text-signal"
+                          className="text-enterprise-navy hover:text-enterprise-navy"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -2697,11 +3621,11 @@ function UsersPanel({
         onOpenChange={(open) => !open && setPendingRole(null)}
         title={
           pendingRole
-            ? `${pendingRole.hasRole ? "Remove" : "Grant"} ${pendingRole.role} role ${pendingRole.hasRole ? "from" : "to"} ${pendingRole.user.full_name || pendingRole.user.email}?`
+            ? `${pendingRole.hasRole ? "Remove" : "Grant"} ${roleLabel(pendingRole.role)} role ${pendingRole.hasRole ? "from" : "to"} ${pendingRole.user.full_name || pendingRole.user.email}?`
             : ""
         }
         description={
-          pendingRole?.role === "admin"
+          pendingRole?.role === "admin" || pendingRole?.role === "super_admin"
             ? "Admins can manage users, roles, equipment, enquiries, customers and site content — the highest level of access."
             : "This changes what this person can see and do in the admin console."
         }

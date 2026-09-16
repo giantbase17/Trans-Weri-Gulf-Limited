@@ -80,6 +80,18 @@ export function ContentPanel({
     }
   }
 
+  async function removeListImage(item: SitePost) {
+    try {
+      await saveSitePost({ ...item, image_url: null });
+      toast.success("Cover image removed");
+      onSaved();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not remove image",
+      );
+    }
+  }
+
   async function savePost() {
     if (!post?.title || !post.slug || !post.excerpt || !post.kind) {
       toast.error("Kind, title, slug and summary are required.");
@@ -146,16 +158,43 @@ export function ContentPanel({
           ))}
           <div className="space-y-1.5 sm:col-span-2">
             <Label className="flex items-center gap-2">
-              <ImagePlus className="h-4 w-4" /> Replace logo
+              <ImagePlus className="h-4 w-4" /> Logo
             </Label>
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(event) => setLogo(event.target.files?.[0] ?? null)}
-            />
-            <p className="text-xs text-muted-foreground">
-              {logo ? logo.name : "Keep the current logo"}
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-background p-1">
+                {logo ? (
+                  <img
+                    src={URL.createObjectURL(logo)}
+                    alt="New logo preview"
+                    className="h-full w-full object-contain"
+                  />
+                ) : settingsForm.logo_url ? (
+                  <img
+                    src={settingsForm.logo_url}
+                    alt="Current logo"
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    No logo
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 space-y-1.5">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    setLogo(event.target.files?.[0] ?? null)
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  {logo
+                    ? `${logo.name} — will replace the logo everywhere it appears (navbar, footer, sign-in pages, admin sidebar) once saved.`
+                    : "Upload a new file to replace the current logo."}
+                </p>
+              </div>
+            </div>
           </div>
           <Button
             variant="signal"
@@ -192,15 +231,40 @@ export function ContentPanel({
               key={item.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-4"
             >
-              <div>
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-signal">
-                  <span>{item.kind}</span>
-                  <span className="text-muted-foreground">
-                    {item.published ? "Published" : "Draft"}
-                  </span>
+              <div className="flex items-center gap-3">
+                <div className="group relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-secondary">
+                  {item.image_url ? (
+                    <>
+                      <img
+                        src={item.image_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        title="Remove image"
+                        onClick={() => void removeListImage(item)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  )}
                 </div>
-                <p className="mt-1 font-semibold">{item.title}</p>
-                <p className="text-sm text-muted-foreground">{item.excerpt}</p>
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-signal">
+                    <span>{item.kind}</span>
+                    <span className="text-muted-foreground">
+                      {item.published ? "Published" : "Draft"}
+                    </span>
+                  </div>
+                  <p className="mt-1 font-semibold">{item.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {item.excerpt}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-1">
                 <Button
@@ -285,13 +349,58 @@ export function ContentPanel({
             </div>
             <div className="space-y-1.5">
               <Label>Cover image</Label>
+              <div className="flex items-center gap-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-secondary">
+                  {postImage ? (
+                    <img
+                      src={URL.createObjectURL(postImage)}
+                      alt="New cover preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : post.image_url ? (
+                    <img
+                      src={post.image_url}
+                      alt="Current cover"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <ImagePlus className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      setPostImage(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  {post.image_url && !postImage && (
+                    <button
+                      type="button"
+                      onClick={() => setPost({ ...post, image_url: null })}
+                      className="text-xs text-signal hover:underline"
+                    >
+                      Remove current cover image
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Link (optional)</Label>
               <Input
-                type="file"
-                accept="image/*"
+                type="url"
+                value={post.link_url ?? ""}
                 onChange={(event) =>
-                  setPostImage(event.target.files?.[0] ?? null)
+                  setPost({ ...post, link_url: event.target.value || null })
                 }
+                placeholder="https://example.com/announcement"
               />
+              <p className="text-xs text-muted-foreground">
+                If set, clicking this update on the site opens this link
+                directly instead of just showing the summary.
+              </p>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Summary *</Label>

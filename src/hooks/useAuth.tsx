@@ -57,7 +57,7 @@ export function useAuth() {
     // is, what roles it has — otherwise a legitimate staff/manager account
     // briefly renders as "access denied" while roles are still in flight.
     loading: sessionLoading || rolesLoading,
-    isAdmin: roles.includes("admin"),
+    isAdmin: roles.includes("admin") || roles.includes("super_admin"),
     isStaff: roles.length > 0,
     signOut: () => supabase.auth.signOut(),
   };

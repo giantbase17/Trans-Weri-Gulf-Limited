@@ -136,7 +136,7 @@ function EquipmentDetail() {
               <img
                 src={gallery[active]}
                 alt={item.name}
-                className="aspect-[16/10] w-full object-cover"
+                className="equipment-photo aspect-[16/10] w-full object-cover"
               />
             ) : (
               <div className="flex aspect-[16/10] items-center justify-center text-muted-foreground">
@@ -161,7 +161,7 @@ function EquipmentDetail() {
                   <img
                     src={url}
                     alt=""
-                    className="h-full w-full object-cover"
+                    className="equipment-photo h-full w-full object-cover"
                   />
                 </button>
               ))}

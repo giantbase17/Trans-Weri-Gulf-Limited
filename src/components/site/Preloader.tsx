@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { fetchSiteSettings } from "@/lib/db";
 import { site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +10,10 @@ const FADE_MS = 500;
 export function Preloader() {
   const [visible, setVisible] = useState(true);
   const [fading, setFading] = useState(false);
+  const { data: settings } = useQuery({
+    queryKey: ["site-settings", "public"],
+    queryFn: fetchSiteSettings,
+  });
 
   useEffect(() => {
     let minTimer: ReturnType<typeof setTimeout>;
@@ -48,9 +54,9 @@ export function Preloader() {
       <div className="relative grid place-items-center">
         <span className="absolute -inset-3.5 animate-spin rounded-full border-[3px] border-white/15 border-t-signal motion-reduce:animate-none" />
         <img
-          src={site.logo}
-          alt={`${site.name} logo`}
-          className="h-14 w-auto rounded-sm bg-background p-1.5"
+          src={settings?.logo_url ?? site.logo}
+          alt={`${settings?.company_name ?? site.name} logo`}
+          className="h-20 w-auto max-w-[280px] rounded-sm bg-background p-2 object-contain"
         />
       </div>
     </div>

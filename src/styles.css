@@ -43,6 +43,10 @@
   --color-signal-foreground: var(--signal-foreground);
   --color-field: var(--field);
   --color-field-foreground: var(--field-foreground);
+  --color-enterprise-navy: var(--enterprise-navy);
+  --color-enterprise-royal: var(--enterprise-royal);
+  --color-enterprise-gold: var(--enterprise-gold);
+  --color-enterprise-gold-foreground: var(--enterprise-gold-foreground);
   --color-steel: var(--steel);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
@@ -87,6 +91,13 @@
   --field: oklch(0.6 0.135 155);
   --field-foreground: oklch(0.99 0.005 250);
 
+  /* Enterprise admin accent — the admin dashboard's palette, kept separate
+     from the public site's brand/signal/field colors above. */
+  --enterprise-navy: #071a3d;
+  --enterprise-royal: #123e7a;
+  --enterprise-gold: #d4a017;
+  --enterprise-gold-foreground: #071a3d;
+
   --steel: oklch(0.62 0.02 255);
 
   --secondary: oklch(0.945 0.012 255);
@@ -96,7 +107,7 @@
   --accent: oklch(0.94 0.03 155);
   --accent-foreground: oklch(0.28 0.08 160);
 
-  --destructive: oklch(0.56 0.205 27);
+  --destructive: #071a3d;
   --destructive-foreground: oklch(0.99 0.005 250);
 
   --border: oklch(0.9 0.012 255);
@@ -133,6 +144,12 @@
     120deg,
     oklch(0.6 0.135 155) 0%,
     oklch(0.33 0.145 268) 100%
+  );
+  --gradient-enterprise: linear-gradient(120deg, #d4a017 0%, #a97e10 100%);
+  --gradient-enterprise-navy: linear-gradient(
+    135deg,
+    #071a3d 0%,
+    #123e7a 100%
   );
   --shadow-lift: 0 18px 45px -22px oklch(0.19 0.075 268 / 0.55);
   --shadow-glow:
@@ -172,6 +189,14 @@
   background-image: var(--gradient-field);
 }
 
+@utility bg-enterprise-gradient {
+  background-image: var(--gradient-enterprise);
+}
+
+@utility bg-enterprise-navy-gradient {
+  background-image: var(--gradient-enterprise-navy);
+}
+
 @utility shadow-lift {
   box-shadow: var(--shadow-lift);
 }
@@ -182,6 +207,18 @@
 
 @utility text-balance-tight {
   letter-spacing: -0.02em;
+}
+
+/* Real-world equipment photos vary wildly in sharpness/contrast depending on
+ * the phone/lighting they were shot with. This runs every equipment photo
+ * through a shared unsharp-mask (via the #equip-sharpen SVG filter rendered
+ * once in SiteLayout) plus a contrast/saturation lift, so the whole
+ * catalogue reads at one consistent, punchy, "professional catalogue"
+ * quality level instead of some photos looking sharp and others looking
+ * flat or hazy. */
+@utility equipment-photo {
+  filter: url(#equip-sharpen) contrast(1.08) saturate(1.18) brightness(1.02);
+  image-rendering: -webkit-optimize-contrast;
 }
 
 @utility hazard-stripe {

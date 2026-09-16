@@ -24,6 +24,8 @@ const buttonVariants = cva(
         field:
           "bg-field text-field-foreground shadow-sm hover:brightness-110 font-semibold uppercase tracking-wide",
         hero: "bg-primary-foreground/10 text-primary-foreground border border-primary-foreground/30 backdrop-blur-sm hover:bg-primary-foreground/20 font-semibold uppercase tracking-wide",
+        gold:
+          "bg-enterprise-gradient text-enterprise-gold-foreground shadow-lift hover:brightness-110 font-semibold uppercase tracking-wide",
       },
       size: {
         default: "h-9 px-4 py-2",

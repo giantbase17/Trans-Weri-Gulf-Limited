@@ -19,12 +19,12 @@ import {
   Users,
   Weight,
 } from "lucide-react";
-import heroBackground from "@/assests/background.png";
+import heroBackground from "@/assests/background.webp";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { fetchEquipmentList, fetchSitePosts, type Equipment } from "@/lib/db";
+import { fetchEquipmentCategories, fetchEquipmentList, fetchSitePosts, type Equipment } from "@/lib/db";
 import { CATEGORIES, equipmentImageUrl, site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -148,7 +148,7 @@ function BrowseEquipmentCard({ item }: { item: Equipment }) {
             src={img}
             alt={item.name}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="equipment-photo h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -203,6 +203,11 @@ function HomePage() {
     queryKey: ["equipment", "public"],
     queryFn: fetchEquipmentList,
   });
+  const { data: categories } = useQuery({
+    queryKey: ["equipment-categories"],
+    queryFn: fetchEquipmentCategories,
+  });
+  const categoryList = categories ?? CATEGORIES;
   const { data: publishedPosts = [] } = useQuery({
     queryKey: ["site-posts", "public"],
     queryFn: () => fetchSitePosts(),
@@ -244,8 +249,9 @@ function HomePage() {
         body: post.excerpt,
         image: post.kind,
         imageUrl: post.image_url,
+        linkUrl: post.link_url,
       }))
-    : updates.map((update) => ({ ...update, imageUrl: null }));
+    : updates.map((update) => ({ ...update, imageUrl: null, linkUrl: null }));
 
   return (
     <SiteLayout>
@@ -311,6 +317,21 @@ function HomePage() {
                   </a>
                 </Button>
               </div>
+
+              <p
+                data-reveal
+                data-reveal-delay={0.2}
+                className="mt-5 text-sm text-primary-foreground/70"
+              >
+                Also offering Energy &amp; Petroleum, General Trading,
+                Import &amp; Export, Logistics and Management Consultancy —{" "}
+                <Link
+                  to="/services"
+                  className="font-bold text-field underline underline-offset-2 hover:text-primary-foreground"
+                >
+                  see all services
+                </Link>
+              </p>
 
               <div
                 data-reveal
@@ -397,7 +418,7 @@ function HomePage() {
             >
               All categories
             </button>
-            {CATEGORIES.filter((c) => c.value !== "others").map((c) => (
+            {categoryList.filter((c) => c.value !== "others").map((c) => (
               <button
                 key={c.value}
                 onClick={() => setCategory(c.value)}
@@ -467,59 +488,89 @@ function HomePage() {
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {visibleUpdates.map((update, index) => (
-              <article
-                key={update.title}
-                data-reveal
-                data-reveal-delay={index * 0.08}
-                className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
-              >
-                <div className="relative h-48 overflow-hidden bg-brand-deep">
-                  <img
-                    src={
-                      update.imageUrl ??
-                      (update.image === "incoming"
-                        ? equipmentImageUrl(equipment[2]?.primary_image_url)
-                        : update.image === "field" || update.image === "blog"
-                          ? equipmentImageUrl(equipment[1]?.primary_image_url)
-                          : equipmentImageUrl(
-                              equipment[0]?.primary_image_url,
-                            )) ??
-                      undefined
-                    }
-                    alt={update.title}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-brand-deep/80 to-transparent" />
-                  <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-foreground">
-                    {update.image === "incoming" ? (
-                      <Truck className="h-4 w-4 text-field" />
-                    ) : update.image === "field" || update.image === "blog" ? (
-                      <HardHat className="h-4 w-4 text-field" />
+            {visibleUpdates.map((update, index) => {
+              const cardContent = (
+                <>
+                  <div className="relative h-48 overflow-hidden bg-brand-deep">
+                    <img
+                      src={
+                        update.imageUrl ??
+                        (update.image === "incoming"
+                          ? equipmentImageUrl(equipment[2]?.primary_image_url)
+                          : update.image === "field" || update.image === "blog"
+                            ? equipmentImageUrl(equipment[1]?.primary_image_url)
+                            : equipmentImageUrl(
+                                equipment[0]?.primary_image_url,
+                              )) ??
+                        undefined
+                      }
+                      alt={update.title}
+                      loading="lazy"
+                      className="equipment-photo h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-deep/80 to-transparent" />
+                    <span className="absolute bottom-4 left-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary-foreground">
+                      {update.image === "incoming" ? (
+                        <Truck className="h-4 w-4 text-field" />
+                      ) : update.image === "field" ||
+                        update.image === "blog" ? (
+                        <HardHat className="h-4 w-4 text-field" />
+                      ) : (
+                        <Newspaper className="h-4 w-4 text-field" />
+                      )}
+                      {update.type}
+                    </span>
+                  </div>
+                  <div className="p-6">
+                    <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-signal">
+                      <CalendarDays className="h-3.5 w-3.5" /> {update.date}
+                    </p>
+                    <h3 className="mt-3 text-xl leading-tight">
+                      {update.title}
+                    </h3>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      {update.body}
+                    </p>
+                    {update.linkUrl ? (
+                      <span className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand group-hover:text-signal">
+                        Read more <ArrowRight className="h-4 w-4" />
+                      </span>
                     ) : (
-                      <Newspaper className="h-4 w-4 text-field" />
+                      <Link
+                        to="/contact"
+                        className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand hover:text-signal"
+                      >
+                        Talk to the team <ArrowRight className="h-4 w-4" />
+                      </Link>
                     )}
-                    {update.type}
-                  </span>
-                </div>
-                <div className="p-6">
-                  <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-signal">
-                    <CalendarDays className="h-3.5 w-3.5" /> {update.date}
-                  </p>
-                  <h3 className="mt-3 text-xl leading-tight">{update.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {update.body}
-                  </p>
-                  <Link
-                    to="/contact"
-                    className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-brand hover:text-signal"
-                  >
-                    Talk to the team <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </div>
-              </article>
-            ))}
+                  </div>
+                </>
+              );
+              const cardClassName =
+                "group block overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lift";
+              return update.linkUrl ? (
+                <a
+                  key={update.title}
+                  href={update.linkUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-reveal
+                  data-reveal-delay={index * 0.08}
+                  className={cardClassName}
+                >
+                  {cardContent}
+                </a>
+              ) : (
+                <article
+                  key={update.title}
+                  data-reveal
+                  data-reveal-delay={index * 0.08}
+                  className={cardClassName}
+                >
+                  {cardContent}
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -538,7 +589,7 @@ function HomePage() {
                   }
                   alt="Bulldozer working on site"
                   loading="lazy"
-                  className="h-[420px] w-full object-cover"
+                  className="equipment-photo h-[420px] w-full object-cover"
                 />
               )}
               <div className="absolute bottom-5 left-5 rounded-xl bg-brand-deep/90 px-6 py-4 text-primary-foreground backdrop-blur">
@@ -567,38 +618,6 @@ function HomePage() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="relative overflow-hidden bg-hero-gradient py-20 grain-overlay">
-          <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-            <Truck data-reveal className="mx-auto h-10 w-10 text-signal" />
-            <h2
-              data-reveal
-              className="mt-5 text-3xl text-primary-foreground sm:text-5xl"
-            >
-              Need a machine on site this week?
-            </h2>
-            <p
-              data-reveal
-              className="mx-auto mt-4 max-w-2xl text-primary-foreground/80"
-            >
-              Send us your scope and duration. We will respond with
-              availability, rates and a mobilisation plan — usually within the
-              hour.
-            </p>
-            <div
-              data-reveal
-              className="mt-8 flex flex-wrap justify-center gap-3"
-            >
-              <Button asChild variant="signal" size="xl">
-                <Link to="/contact">Request a Quote</Link>
-              </Button>
-              <Button asChild variant="hero" size="xl">
-                <a href={`mailto:${site.email}`}>Email Our Team</a>
-              </Button>
             </div>
           </div>
         </section>

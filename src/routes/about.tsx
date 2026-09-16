@@ -3,9 +3,10 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
+  Clock,
   Compass,
   HardHat,
-  MapPin,
+  Quote,
   ShieldCheck,
   Truck,
   Wrench,
@@ -20,10 +21,9 @@ import {
   Briefcase,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
-import { Button } from "@/components/ui/button";
-import { site, whatsappLink } from "@/lib/site";
-import yardImage from "@/assests/eq-p38_1.jpg";
-import workImage from "@/assests/eq-p6_1.jpg";
+import { site } from "@/lib/site";
+import ceoPhoto from "@/assests/ceo-keme-inokoba.webp";
+import headerBanner from "@/assests/header-banner.webp";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -122,33 +122,81 @@ const services = [
   },
 ];
 
+const heroBadges = [
+  [ShieldCheck, "Reliable", "Equipment"],
+  [Users, "Skilled", "Support Team"],
+  [Clock, "On-Time", "Delivery"],
+] as const;
+
 function AboutPage() {
   return (
     <SiteLayout>
-      <section className="relative overflow-hidden bg-hero-gradient pt-14 pb-20 sm:pt-16 grain-overlay">
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+      <section className="relative overflow-hidden bg-hero-gradient pt-14 pb-20 sm:pt-16">
+        <img
+          src={headerBanner}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover opacity-40"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-deep/85 to-brand-deep/70" />
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-field">
-              About {site.shortName}
-            </p>
-            <h1 className="mt-4 max-w-3xl text-4xl leading-tight text-primary-foreground sm:text-6xl">
-              Plant you can plan around.
+            <div className="flex items-center gap-3">
+              <span className="h-px w-8 bg-sky-400" />
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
+                About {site.shortName}
+              </p>
+            </div>
+            <h1 className="mt-4 max-w-xl text-4xl leading-tight text-primary-foreground sm:text-6xl">
+              Plant you can plan{" "}
+              <span className="text-sky-400">around.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-primary-foreground/80">
               {site.name} is a Yenagoa-based heavy equipment rental company
               supporting the contractors, developers and project teams building
               the Niger Delta.
             </p>
+            <div className="mt-8 flex flex-wrap gap-6">
+              {heroBadges.map(([Icon, line1, line2]) => (
+                <div key={line2} className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-400 text-white">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <p className="text-sm font-bold leading-tight text-primary-foreground">
+                    {line1}
+                    <br />
+                    {line2}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="relative h-72 overflow-hidden rounded-2xl border border-primary-foreground/15 sm:h-96">
-            <img
-              src={yardImage}
-              alt="Heavy excavator from the Trans Weri Gulf fleet"
-              className="h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-deep/80 via-transparent to-transparent" />
-            <div className="absolute bottom-5 left-5 flex items-center gap-2 text-sm font-semibold text-primary-foreground">
-              <MapPin className="h-4 w-4 text-field" /> {site.addressShort}
+          <div className="rounded-[2rem] border border-primary-foreground/15 bg-primary-foreground/5 p-8 backdrop-blur-sm sm:p-10">
+            <Quote className="h-8 w-8 text-sky-400" />
+            <p className="mt-4 text-lg italic leading-relaxed text-primary-foreground/85">
+              Great results are not accidents. They are built through
+              discipline, consistency and a clear vision. Keep working, keep
+              growing, and let your effort create the future you want.
+            </p>
+            <div className="mt-6 flex items-center gap-4">
+              <img
+                src={ceoPhoto}
+                alt="Keme Inokoba, CEO of Trans Weri Gulf Limited"
+                className="h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-sky-400/40"
+              />
+              <div>
+                <p className="font-bold text-primary-foreground">
+                  Keme Inokoba
+                </p>
+                <p className="text-xs uppercase tracking-widest text-sky-300">
+                  CEO, {site.name}
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 border-t border-primary-foreground/15 pt-4 text-xs font-semibold uppercase tracking-widest text-sky-300">
+              Safer projects{" "}
+              <span className="text-primary-foreground/30">|</span> Stronger
+              communities <span className="text-primary-foreground/30">|</span>{" "}
+              A sustainable Niger Delta
             </div>
           </div>
         </div>
@@ -233,13 +281,19 @@ function AboutPage() {
             </motion.article>
           ))}
         </div>
+        <Link
+          to="/services"
+          className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-brand hover:text-signal"
+        >
+          View all services <ArrowRight className="h-4 w-4" />
+        </Link>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
           <div className="relative overflow-hidden rounded-2xl">
             <img
-              src={workImage}
+              src={headerBanner}
               alt="Tracked bulldozer ready for earthworks"
               className="h-[420px] w-full object-cover"
             />
@@ -325,39 +379,6 @@ function AboutPage() {
                 <p className="mt-3 text-muted-foreground">{body}</p>
               </motion.article>
             ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-brand-deep py-20 text-center text-primary-foreground">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-field">
-            Let us scope it
-          </p>
-          <h2 className="mt-3 text-3xl sm:text-5xl">
-            Tell us what your project needs.
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-primary-foreground/70">
-            Share the machine, location and duration. We will come back with
-            availability and a mobilisation plan.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild variant="signal" size="xl">
-              <Link to="/contact">
-                Start an enquiry <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="hero" size="xl">
-              <a
-                href={whatsappLink(
-                  `Hello ${site.name}, I would like to discuss a project requirement.`,
-                )}
-                target="_blank"
-                rel="noreferrer"
-              >
-                WhatsApp the team
-              </a>
-            </Button>
           </div>
         </div>
       </section>

@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { BarChart3, ShieldCheck, Truck } from "lucide-react";
-import heroBackground from "@/assests/background.png";
+import heroBackground from "@/assests/background.webp";
+import { fetchSiteSettings } from "@/lib/db";
 import { site } from "@/lib/site";
 
 const authFeatures = [
@@ -22,6 +24,11 @@ const authFeatures = [
 ] as const;
 
 export function AuthShell({ children }: { children: ReactNode }) {
+  const { data: settings } = useQuery({
+    queryKey: ["site-settings", "public"],
+    queryFn: fetchSiteSettings,
+  });
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-brand-deep">
       <div className="absolute inset-0">
@@ -36,9 +43,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col items-center justify-center gap-12 px-4 py-12 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="hidden max-w-xl text-primary-foreground lg:block">
           <img
-            src={site.logo}
-            alt={site.name}
-            className="h-12 w-fit rounded bg-background p-1"
+            src={settings?.logo_url ?? site.logo}
+            alt={settings?.company_name ?? site.name}
+            className="h-16 w-fit max-w-[260px] rounded bg-background p-1.5 object-contain"
           />
           <span className="mt-5 inline-flex items-center rounded-full border border-field/50 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-field">
             Fleet operations portal

@@ -13,7 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as SetPasswordRouteImport } from './routes/set-password'
+import { Route as ServicesRouteImport } from './routes/services'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as EquipmentIndexRouteImport } from './routes/equipment.index'
 import { Route as EquipmentSlugRouteImport } from './routes/equipment.$slug'
@@ -38,9 +38,9 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SetPasswordRoute = SetPasswordRouteImport.update({
-  id: '/set-password',
-  path: '/set-password',
+const ServicesRoute = ServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -64,7 +64,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/set-password': typeof SetPasswordRoute
+  '/services': typeof ServicesRoute
   '/equipment/$slug': typeof EquipmentSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/equipment/': typeof EquipmentIndexRoute
@@ -74,7 +74,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/set-password': typeof SetPasswordRoute
+  '/services': typeof ServicesRoute
   '/equipment/$slug': typeof EquipmentSlugRoute
   '/admin': typeof AdminIndexRoute
   '/equipment': typeof EquipmentIndexRoute
@@ -85,7 +85,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/set-password': typeof SetPasswordRoute
+  '/services': typeof ServicesRoute
   '/equipment/$slug': typeof EquipmentSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/equipment/': typeof EquipmentIndexRoute
@@ -97,7 +97,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
-    | '/set-password'
+    | '/services'
     | '/equipment/$slug'
     | '/admin/'
     | '/equipment/'
@@ -107,7 +107,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
-    | '/set-password'
+    | '/services'
     | '/equipment/$slug'
     | '/admin'
     | '/equipment'
@@ -117,7 +117,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
-    | '/set-password'
+    | '/services'
     | '/equipment/$slug'
     | '/admin/'
     | '/equipment/'
@@ -128,7 +128,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
-  SetPasswordRoute: typeof SetPasswordRoute
+  ServicesRoute: typeof ServicesRoute
   EquipmentSlugRoute: typeof EquipmentSlugRoute
   AdminIndexRoute: typeof AdminIndexRoute
   EquipmentIndexRoute: typeof EquipmentIndexRoute
@@ -164,11 +164,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/set-password': {
-      id: '/set-password'
-      path: '/set-password'
-      fullPath: '/set-password'
-      preLoaderRoute: typeof SetPasswordRouteImport
+    '/services': {
+      id: '/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof ServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -200,7 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
-  SetPasswordRoute: SetPasswordRoute,
+  ServicesRoute: ServicesRoute,
   EquipmentSlugRoute: EquipmentSlugRoute,
   AdminIndexRoute: AdminIndexRoute,
   EquipmentIndexRoute: EquipmentIndexRoute,

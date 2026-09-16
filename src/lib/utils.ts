@@ -19,3 +19,18 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/**
+ * The canonical origin to use in emailed links (auth confirmation, password
+ * reset, invites). Prefers VITE_SITE_URL so those links always point at the
+ * production deployment even when an admin triggers them from a local dev
+ * server, which would otherwise bake an unreachable localhost URL into the
+ * email.
+ */
+export function getSiteUrl(): string {
+  const configured = import.meta.env["VITE_SITE_URL"];
+  if (typeof configured === "string" && configured.trim()) {
+    return configured.trim().replace(/\/$/, "");
+  }
+  return typeof window === "undefined" ? "" : window.location.origin;
+}
