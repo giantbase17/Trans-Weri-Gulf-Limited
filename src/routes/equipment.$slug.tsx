@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchEquipmentBySlug, fetchEquipmentImages } from "@/lib/db";
 import { supabase } from "@/integrations/supabase/client";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import {
   categoryLabel,
   equipmentImageUrl,
@@ -53,6 +54,7 @@ function EquipmentDetail() {
   const { slug } = Route.useParams();
   const [active, setActive] = useState(0);
   const queryClient = useQueryClient();
+  const scope = useScrollReveal<HTMLDivElement>();
 
   const { data: item, isLoading } = useQuery({
     queryKey: ["equipment", slug],
@@ -120,6 +122,7 @@ function EquipmentDetail() {
 
   return (
     <SiteLayout>
+      <div ref={scope}>
       <div className="bg-hero-gradient pt-10 pb-10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <Link
@@ -128,7 +131,7 @@ function EquipmentDetail() {
           >
             <ArrowLeft className="h-4 w-4" /> Back to fleet
           </Link>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div data-reveal className="mt-4 flex flex-wrap items-center gap-3">
             <Badge className="bg-signal text-signal-foreground uppercase tracking-wider">
               {categoryLabel(item.category)}
             </Badge>
@@ -141,10 +144,18 @@ function EquipmentDetail() {
                 : item.status}
             </Badge>
           </div>
-          <h1 className="mt-3 text-4xl text-primary-foreground sm:text-5xl">
+          <h1
+            data-reveal
+            data-reveal-delay={0.06}
+            className="mt-3 text-4xl text-primary-foreground sm:text-5xl"
+          >
             {item.name}
           </h1>
-          <p className="mt-2 flex items-center gap-2 text-primary-foreground/75">
+          <p
+            data-reveal
+            data-reveal-delay={0.1}
+            className="mt-2 flex items-center gap-2 text-primary-foreground/75"
+          >
             <MapPin className="h-4 w-4 text-field" /> {item.location}
           </p>
         </div>
@@ -152,7 +163,7 @@ function EquipmentDetail() {
 
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.2fr_0.8fr]">
         <div>
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
+          <div data-reveal className="overflow-hidden rounded-xl border border-border bg-card">
             {gallery[active] ? (
               <img
                 src={gallery[active]}
@@ -189,13 +200,13 @@ function EquipmentDetail() {
             </div>
           )}
 
-          <div className="mt-8">
+          <div data-reveal className="mt-8">
             <h2 className="text-2xl">Overview</h2>
             <p className="mt-3 text-muted-foreground">{item.description}</p>
           </div>
 
           {specs.length > 0 && (
-            <div className="mt-8">
+            <div data-reveal className="mt-8">
               <h2 className="flex items-center gap-2 text-2xl">
                 <Wrench className="h-5 w-5 text-signal" /> Specifications
               </h2>
@@ -212,7 +223,7 @@ function EquipmentDetail() {
             </div>
           )}
 
-          <div className="mt-8 rounded-xl border border-border bg-card p-6">
+          <div data-reveal className="mt-8 rounded-xl border border-border bg-card p-6">
             <h2 className="text-2xl">Request this machine</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Fill the form and our rental desk will confirm availability and
@@ -224,7 +235,11 @@ function EquipmentDetail() {
           </div>
         </div>
 
-        <aside className="lg:sticky lg:top-28 lg:self-start">
+        <aside
+          data-reveal
+          data-reveal-delay={0.1}
+          className="lg:sticky lg:top-28 lg:self-start"
+        >
           <div className="rounded-xl border border-border bg-card p-6 shadow-lift">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-signal">
               Pricing
@@ -312,6 +327,7 @@ function EquipmentDetail() {
             </div>
           </div>
         </aside>
+      </div>
       </div>
     </SiteLayout>
   );

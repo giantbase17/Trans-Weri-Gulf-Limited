@@ -635,10 +635,6 @@ function Dashboard({
   preview?: boolean;
 }) {
   const now = useLiveClock();
-  const displayName =
-    (auth.user?.user_metadata as { full_name?: string } | undefined)?.full_name?.trim() ||
-    auth.user?.email?.split("@")[0] ||
-    "there";
   const [tab, setTab] = useState<Tab>("overview");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Partial<Equipment> | null>(null);
@@ -717,6 +713,14 @@ function Dashboard({
     queryKey: ["users", "admin"],
     queryFn: preview ? () => Promise.resolve([]) : fetchAllUsers,
   });
+  // profiles.full_name (set on account creation) is the real display name —
+  // auth.user_metadata.full_name is often blank, which used to leave the
+  // greeting falling back to the email's local part (e.g. "emekaonu7").
+  const displayName =
+    users.data?.find((u) => u.id === auth.user?.id)?.full_name?.trim() ||
+    (auth.user?.user_metadata as { full_name?: string } | undefined)?.full_name?.trim() ||
+    auth.user?.email?.split("@")[0] ||
+    "there";
   const settings = useQuery({
     queryKey: ["site-settings", "admin"],
     queryFn: preview ? () => Promise.resolve(null) : fetchSiteSettings,
@@ -761,8 +765,21 @@ function Dashboard({
   }
 
   return (
-    <div className="min-h-screen bg-secondary/40 lg:flex">
-      <aside className="w-full border-b border-border bg-brand-deep text-primary-foreground lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-b-0">
+    <div className="relative min-h-screen bg-secondary/40 lg:flex">
+      {/* Same faint brand watermark as the public site (see SiteLayout) —
+       * the admin shell has its own layout instead of SiteLayout, so it
+       * needs its own copy to show the logo through its light backgrounds. */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden"
+      >
+        <img
+          src={settings.data?.logo_url ?? site.logo}
+          alt=""
+          className="w-[90vw] max-w-3xl opacity-[0.035] sm:w-[55vw]"
+        />
+      </div>
+      <aside className="relative z-10 w-full border-b border-border bg-brand-deep text-primary-foreground lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col lg:border-b-0">
         <div className="flex items-center justify-between px-5 py-5 lg:block">
           <img
             src={settings.data?.logo_url ?? site.logo}
@@ -855,7 +872,7 @@ function Dashboard({
           </div>
         </div>
       </aside>
-      <main className="w-full px-4 py-8 sm:px-6 lg:ml-64 lg:px-10">
+      <main className="relative z-10 w-full px-4 py-8 sm:px-6 lg:ml-64 lg:px-10">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -3509,10 +3526,19 @@ function UsersPanel({
 
       <Card className="mt-5">
         <CardHeader>
-          <CardTitle>User management</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Manage users and their access roles
-          </p>
+          <div className="flex items-center gap-3">
+            <img
+              src={site.logo}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-md bg-background object-contain p-1 ring-1 ring-border"
+            />
+            <div>
+              <CardTitle>User management</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Manage users and their access roles
+              </p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

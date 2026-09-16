@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { site } from "@/lib/site";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import headerBanner from "@/assests/header-banner.webp";
 
 export const Route = createFileRoute("/services")({
@@ -72,8 +73,10 @@ const services = [
 ] as const;
 
 function ServicesPage() {
+  const scope = useScrollReveal<HTMLDivElement>();
   return (
     <SiteLayout>
+      <div ref={scope}>
       <section className="relative overflow-hidden bg-hero-gradient pt-14 pb-20 sm:pt-16">
         <img
           src={headerBanner}
@@ -82,17 +85,25 @@ function ServicesPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-deep/85 to-brand-deep/70" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex items-center gap-3">
+          <div data-reveal className="flex items-center gap-3">
             <span className="h-px w-8 bg-sky-400" />
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
               What we do
             </p>
           </div>
-          <h1 className="mt-4 max-w-2xl text-4xl leading-tight text-primary-foreground sm:text-6xl">
+          <h1
+            data-reveal
+            data-reveal-delay={0.06}
+            className="mt-4 max-w-2xl text-4xl leading-tight text-primary-foreground sm:text-6xl"
+          >
             A diversified platform for{" "}
             <span className="text-sky-400">supply, projects and trade.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-primary-foreground/80">
+          <p
+            data-reveal
+            data-reveal-delay={0.12}
+            className="mt-6 max-w-2xl text-lg text-primary-foreground/80"
+          >
             {site.name} operates across general trading, energy &amp;
             petroleum products, logistics, construction, management
             consultancy and heavy equipment rental — a single, responsive
@@ -103,9 +114,11 @@ function ServicesPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {services.map(({ icon: Icon, title, body, cta }) => (
+          {services.map(({ icon: Icon, title, body, cta }, index) => (
             <article
               key={title}
+              data-reveal
+              data-reveal-delay={(index % 3) * 0.08}
               className="flex flex-col border-t-4 border-brand bg-card p-6 shadow-sm"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
@@ -123,6 +136,7 @@ function ServicesPage() {
           ))}
         </div>
       </section>
+      </div>
     </SiteLayout>
   );
 }

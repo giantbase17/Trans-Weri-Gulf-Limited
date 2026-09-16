@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { site } from "@/lib/site";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import ceoPhoto from "@/assests/ceo-keme-inokoba.webp";
 import headerBanner from "@/assests/header-banner.webp";
 
@@ -129,8 +130,10 @@ const heroBadges = [
 ] as const;
 
 function AboutPage() {
+  const scope = useScrollReveal<HTMLDivElement>();
   return (
     <SiteLayout>
+      <div ref={scope}>
       <section className="relative overflow-hidden bg-hero-gradient pt-14 pb-20 sm:pt-16">
         <img
           src={headerBanner}
@@ -140,22 +143,34 @@ function AboutPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-deep/85 to-brand-deep/70" />
         <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <div className="flex items-center gap-3">
+            <div data-reveal className="flex items-center gap-3">
               <span className="h-px w-8 bg-sky-400" />
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
                 About {site.shortName}
               </p>
             </div>
-            <h1 className="mt-4 max-w-xl text-4xl leading-tight text-primary-foreground sm:text-6xl">
+            <h1
+              data-reveal
+              data-reveal-delay={0.06}
+              className="mt-4 max-w-xl text-4xl leading-tight text-primary-foreground sm:text-6xl"
+            >
               Plant you can plan{" "}
               <span className="text-sky-400">around.</span>
             </h1>
-            <p className="mt-6 max-w-xl text-lg text-primary-foreground/80">
+            <p
+              data-reveal
+              data-reveal-delay={0.12}
+              className="mt-6 max-w-xl text-lg text-primary-foreground/80"
+            >
               {site.name} is a Yenagoa-based heavy equipment rental company
               supporting the contractors, developers and project teams building
               the Niger Delta.
             </p>
-            <div className="mt-8 flex flex-wrap gap-6">
+            <div
+              data-reveal
+              data-reveal-delay={0.18}
+              className="mt-8 flex flex-wrap gap-6"
+            >
               {heroBadges.map(([Icon, line1, line2]) => (
                 <div key={line2} className="flex items-center gap-3">
                   <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-sky-400 text-white">
@@ -170,7 +185,11 @@ function AboutPage() {
               ))}
             </div>
           </div>
-          <div className="rounded-[2rem] border border-primary-foreground/15 bg-primary-foreground/5 p-8 backdrop-blur-sm sm:p-10">
+          <div
+            data-reveal
+            data-reveal-delay={0.1}
+            className="rounded-[2rem] border border-primary-foreground/15 bg-primary-foreground/5 p-8 backdrop-blur-sm sm:p-10"
+          >
             <Quote className="h-8 w-8 text-sky-400" />
             <p className="mt-4 text-lg italic leading-relaxed text-primary-foreground/85">
               Great results are not accidents. They are built through
@@ -205,14 +224,21 @@ function AboutPage() {
       {/* Vision & Mission Section */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div className="grid gap-12 lg:grid-cols-2">
-          <div className="bg-brand-deep p-8 rounded-2xl text-primary-foreground">
+          <div
+            data-reveal
+            className="bg-brand-deep p-8 rounded-2xl text-primary-foreground"
+          >
             <Target className="h-8 w-8 text-field mb-4" />
             <h2 className="text-2xl font-bold mb-4">Our Vision</h2>
             <p className="text-lg text-primary-foreground/80">
               To be the leading provider of integrated equipment rental, logistics, and management consultancy services across Nigeria and the West African region.
             </p>
           </div>
-          <div className="bg-brand-deep p-8 rounded-2xl text-primary-foreground">
+          <div
+            data-reveal
+            data-reveal-delay={0.08}
+            className="bg-brand-deep p-8 rounded-2xl text-primary-foreground"
+          >
             <Eye className="h-8 w-8 text-field mb-4" />
             <h2 className="text-2xl font-bold mb-4">Our Mission</h2>
             <p className="text-lg text-primary-foreground/80">
@@ -291,7 +317,7 @@ function AboutPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-          <div className="relative overflow-hidden rounded-2xl">
+          <div data-reveal className="relative overflow-hidden rounded-2xl">
             <img
               src={headerBanner}
               alt="Tracked bulldozer ready for earthworks"
@@ -301,7 +327,7 @@ function AboutPage() {
               Niger Delta operations
             </div>
           </div>
-          <div>
+          <div data-reveal data-reveal-delay={0.1}>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-signal">
               Built for the work
             </p>
@@ -382,6 +408,7 @@ function AboutPage() {
           </div>
         </div>
       </section>
+      </div>
     </SiteLayout>
   );
 }

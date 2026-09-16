@@ -11,7 +11,6 @@ import {
   LifeBuoy,
   MapPin,
   Newspaper,
-  Phone,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -30,14 +29,22 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-import { fetchEquipmentCategories, fetchEquipmentList, fetchSitePosts, type Equipment } from "@/lib/db";
+import {
+  fetchEquipmentCategories,
+  fetchEquipmentList,
+  fetchSitePosts,
+  type Equipment,
+} from "@/lib/db";
 import { CATEGORIES, equipmentImageUrl, site } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Trans Weri Gulf Limited | Heavy Equipment Rental & Sales, Yenagoa" },
+      {
+        title:
+          "Trans Weri Gulf Limited | Heavy Equipment Rental & Sales, Yenagoa",
+      },
       {
         name: "description",
         content:
@@ -282,7 +289,9 @@ function HomePage() {
 
   const [term, setTerm] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
-  const [filterType, setFilterType] = useState<"all" | "rental" | "sale">("all");
+  const [filterType, setFilterType] = useState<"all" | "rental" | "sale">(
+    "all",
+  );
   const [category, setCategory] = useState<string | undefined>(undefined);
 
   const filteredEquipment = useMemo(() => {
@@ -339,29 +348,22 @@ function HomePage() {
 
           <div className="relative mx-auto flex max-w-7xl flex-col px-4 py-14 sm:px-6 lg:min-h-[600px] lg:justify-center lg:py-16">
             <div className="max-w-xl lg:pb-4">
-              <p
-                data-reveal
-                className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-field"
-              >
-                <span className="h-px w-6 bg-field" /> Equipment catalogue
-              </p>
-
               <h1
                 data-reveal
                 data-reveal-delay={0.06}
                 className="text-balance-tight mt-4 text-4xl leading-[1.05] text-primary-foreground sm:text-5xl lg:text-6xl"
               >
-                Heavy equipment that keeps projects moving
+                One partner for projects, trade and growth
               </h1>
 
               <p
                 data-reveal
                 data-reveal-delay={0.12}
-                className="mt-5 max-w-xl text-base text-primary-foreground/80 sm:text-lg"
+                className="mt-5 max-w-xl text-base font-bold text-primary-foreground/80 sm:text-lg"
               >
-                Daily, weekly and monthly rental rates or purchase options.
-                Operated or bare rental. Delivered anywhere in Bayelsa State
-                and the wider Niger Delta.
+                From equipment and logistics to energy, construction, trading
+                and consultancy, we deliver the practical support your business
+                needs—reliably, efficiently and wherever the job takes you.
               </p>
 
               <div
@@ -370,31 +372,11 @@ function HomePage() {
                 className="mt-8 flex flex-wrap gap-3"
               >
                 <Button asChild variant="signal" size="lg">
-                  <Link to="/equipment">
-                    Browse equipment <ArrowRight className="h-4 w-4" />
+                  <Link to="/services">
+                    Discover our services <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="hero" size="lg">
-                  <a href={`tel:${site.phone}`}>
-                    <Phone className="h-4 w-4" /> Talk to an expert
-                  </a>
-                </Button>
               </div>
-
-              <p
-                data-reveal
-                data-reveal-delay={0.2}
-                className="mt-5 text-sm text-primary-foreground/70"
-              >
-                Also offering Energy &amp; Petroleum, General Trading,
-                Import &amp; Export, Logistics and Management Consultancy —{" "}
-                <Link
-                  to="/services"
-                  className="font-bold text-field underline underline-offset-2 hover:text-primary-foreground"
-                >
-                  see all services
-                </Link>
-              </p>
 
               <div
                 data-reveal
@@ -481,26 +463,28 @@ function HomePage() {
             >
               All categories
             </button>
-            {categoryList.filter((c) => c.value !== "others").map((c) => (
-              <button
-                key={c.value}
-                onClick={() => setCategory(c.value)}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
-                  category === c.value
-                    ? "border-brand bg-brand text-brand-foreground"
-                    : "border-border bg-card hover:bg-secondary",
-                )}
-              >
-                {c.label}
-              </button>
-            ))}
+            {categoryList
+              .filter((c) => c.value !== "others")
+              .map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setCategory(c.value)}
+                  className={cn(
+                    "rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+                    category === c.value
+                      ? "border-brand bg-brand text-brand-foreground"
+                      : "border-border bg-card hover:bg-secondary",
+                  )}
+                >
+                  {c.label}
+                </button>
+              ))}
           </div>
 
           {filteredEquipment.length === 0 ? (
             <p className="mt-10 text-center text-muted-foreground">
-              No machines match this filter yet. Try another category or
-              contact us directly.
+              No machines match this filter yet. Try another category or contact
+              us directly.
             </p>
           ) : (
             <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

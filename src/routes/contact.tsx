@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { site, whatsappLink } from "@/lib/site";
 import { fetchSiteSettings } from "@/lib/db";
+import { useScrollReveal } from "@/hooks/useScrollReveal";
 import heroImage from "@/assests/header-banner.webp";
 
 const heroBadges = [
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/contact")({
 });
 
 function ContactPage() {
+  const scope = useScrollReveal<HTMLDivElement>();
   const { data: settings } = useQuery({
     queryKey: ["site-settings", "public"],
     queryFn: fetchSiteSettings,
@@ -52,6 +54,7 @@ function ContactPage() {
   const address = settings?.address ?? site.address;
   return (
     <SiteLayout hideCta>
+      <div ref={scope}>
       <section className="relative overflow-hidden bg-hero-gradient pt-14 pb-16 sm:pt-16">
         <img
           src={heroImage}
@@ -60,22 +63,34 @@ function ContactPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-deep/85 to-sky-900/40" />
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex items-center gap-3">
+          <div data-reveal className="flex items-center gap-3">
             <span className="h-px w-8 bg-sky-400" />
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
               Contact the team
             </p>
           </div>
-          <h1 className="mt-3 max-w-2xl text-4xl text-primary-foreground sm:text-6xl">
+          <h1
+            data-reveal
+            data-reveal-delay={0.06}
+            className="mt-3 max-w-2xl text-4xl text-primary-foreground sm:text-6xl"
+          >
             Tell us what you need{" "}
             <span className="text-sky-400">— we'll take it from there.</span>
           </h1>
-          <p className="mt-5 max-w-2xl text-lg text-primary-foreground/80">
+          <p
+            data-reveal
+            data-reveal-delay={0.12}
+            className="mt-5 max-w-2xl text-lg text-primary-foreground/80"
+          >
             Equipment rental or purchase, energy &amp; petroleum, trading,
             logistics, construction or consultancy — send your enquiry and
             we'll respond with options, rates and next steps.
           </p>
-          <div className="mt-8 flex flex-wrap gap-x-8 gap-y-4">
+          <div
+            data-reveal
+            data-reveal-delay={0.18}
+            className="mt-8 flex flex-wrap gap-x-8 gap-y-4"
+          >
             {heroBadges.map(([Icon, label]) => (
               <div key={label} className="flex items-center gap-2">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-sky-400/40 text-sky-400">
@@ -91,7 +106,7 @@ function ContactPage() {
       </section>
 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-16 sm:px-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <Card className="shadow-lift">
+        <Card data-reveal className="shadow-lift">
           <CardHeader>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-600">
               Enquiry
@@ -109,7 +124,7 @@ function ContactPage() {
           </CardContent>
         </Card>
 
-        <aside className="space-y-5">
+        <aside data-reveal data-reveal-delay={0.1} className="space-y-5">
           <Card className="border-sky-100 bg-gradient-to-br from-sky-50 to-white">
             <CardHeader>
               <CardTitle>Reach us directly</CardTitle>
@@ -226,6 +241,7 @@ function ContactPage() {
           </Card>
         </aside>
       </section>
+      </div>
     </SiteLayout>
   );
 }
