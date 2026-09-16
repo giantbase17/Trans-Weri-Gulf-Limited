@@ -200,10 +200,12 @@ export function EnquiryForm({ equipment }: { equipment?: Equipment | null }) {
     // Open the tab synchronously, inside the click handler, before any
     // `await` — browsers drop the "user gesture" trust (and silently block
     // the popup) once window.open() happens after an awaited async call.
+    // Deliberately omitting "noopener"/"noreferrer" here: per spec, either
+    // one makes window.open() return null instead of a window handle, which
+    // would leave this tab permanently blank since we navigate it below
+    // only after the enquiry save resolves.
     const whatsappWindow =
-      contactMethod === "whatsapp"
-        ? window.open("", "_blank", "noreferrer")
-        : null;
+      contactMethod === "whatsapp" ? window.open("", "_blank") : null;
     try {
       await createEnquiry({
         full_name: pendingValues.full_name,
