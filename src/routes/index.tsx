@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -19,7 +19,13 @@ import {
   Users,
   Weight,
 } from "lucide-react";
-import heroBackground from "@/assests/background.webp";
+import heroEquipment from "@/assests/hero-equipment.webp";
+import heroEnergyPetroleum from "@/assests/hero-energy-petroleum.webp";
+import heroImportExport from "@/assests/hero-import-export.webp";
+import heroLogistics from "@/assests/hero-logistics.webp";
+import heroGeneralTrading from "@/assests/hero-general-trading.webp";
+import heroConstruction from "@/assests/hero-construction.webp";
+import heroManagementConsultancy from "@/assests/hero-management-consultancy.webp";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +58,67 @@ export const Route = createFileRoute("/")({
   }),
   component: HomePage,
 });
+
+const heroSlides = [
+  {
+    src: heroEquipment,
+    alt: "Excavator and wheel loader working on a riverside construction site",
+  },
+  {
+    src: heroEnergyPetroleum,
+    alt: "Storage tanks and pipelines at a petroleum terminal at sunset",
+  },
+  {
+    src: heroImportExport,
+    alt: "Container ship being loaded at a busy port",
+  },
+  {
+    src: heroLogistics,
+    alt: "Air cargo being loaded onto a freighter aircraft",
+  },
+  {
+    src: heroGeneralTrading,
+    alt: "Fleet of delivery trucks at a warehouse loading dock",
+  },
+  {
+    src: heroConstruction,
+    alt: "High-rise building under construction with a tower crane",
+  },
+  {
+    src: heroManagementConsultancy,
+    alt: "Management team meeting in a boardroom overlooking the city",
+  },
+] as const;
+
+/** Crossfades through heroSlides on an interval — a static <img> background
+ * replaced by this so the hero reflects every service line, not just
+ * equipment, without touching any of the surrounding copy. */
+function HeroSlideshow() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <>
+      {heroSlides.map((slide, i) => (
+        <img
+          key={slide.src}
+          src={slide.src}
+          alt={i === index ? slide.alt : ""}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover object-right transition-opacity duration-1000 ease-in-out",
+            i === index ? "opacity-100" : "opacity-0",
+          )}
+        />
+      ))}
+    </>
+  );
+}
 
 const heroFeatures = [
   {
@@ -259,11 +326,7 @@ function HomePage() {
         {/* HERO */}
         <section className="relative overflow-hidden bg-brand-deep lg:min-h-[600px]">
           <div className="absolute inset-0">
-            <img
-              src={heroBackground}
-              alt="Heavy equipment on a construction site at dusk"
-              className="h-full w-full object-cover object-right"
-            />
+            <HeroSlideshow />
             <div className="absolute inset-0 bg-gradient-to-r from-brand-deep via-brand-deep/80 to-brand-deep/50 lg:via-brand-deep/30 lg:to-transparent" />
           </div>
 
