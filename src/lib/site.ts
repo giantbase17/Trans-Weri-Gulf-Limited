@@ -9,9 +9,8 @@ export const site = {
   phone: "07071649524",
   whatsapp: "2347071649524",
   email: "transwerigulflimited@gmail.com",
-  address:
-    "Road 101, Block B, Flat 3, Ekeki Housing Estate Phase 2, Yenagoa, Bayelsa State, Nigeria",
-  addressShort: "Ekeki Housing Estate, Yenagoa",
+  address: "No. 3 Okaka Estate, Yenagoa, Nigeria, 560211",
+  addressShort: "Okaka Estate, Yenagoa",
   facebook: "https://www.facebook.com/share/1E8KaYgpQw/?mibextid=wwXIfr",
   instagram:
     "https://www.instagram.com/transwerigulflimited?igsi=Mm91M3V5ZDJ4NDV1",

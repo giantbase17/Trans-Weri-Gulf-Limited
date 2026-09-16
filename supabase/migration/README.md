@@ -36,7 +36,8 @@ someone wrote it, not that it ran.
 | 20 | `20260916170000_fix_equipment_images_policy.sql` | **Fix**: re-asserts `equipment_images` + `equipment-photos` bucket policies | ✅ |
 | 21 | `20260916180000_update_business_address.sql` | Updates registered address to Ekeki Housing Estate | ✅ |
 | 22 | `20260916190000_enquiry_service_type.sql` | Adds `service_type` to `enquiries` (Enquiry form service picker) | ✅ |
-| 23 | `20260916200000_rls_audit_fixes.sql` | **Fix**: re-asserts `site_settings` policies, adds the previously-missing `site-assets` storage DELETE policy | ⬜ **run this one next** |
+| 23 | `20260916200000_rls_audit_fixes.sql` | **Fix**: re-asserts `site_settings` policies, adds the previously-missing `site-assets` storage DELETE policy | ✅ |
+| 24 | `20260917000000_correct_business_address.sql` | **Fix**: corrects the address to No. 3 Okaka Estate, Yenagoa (#21 had wrongly changed it to Ekeki Housing Estate) | ⬜ **run this one next** |
 
 ## Why fixes get their own file instead of editing the original
 
