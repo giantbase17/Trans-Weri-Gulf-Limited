@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { PackageSearch, Search, SlidersHorizontal } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { EquipmentCard } from "@/components/site/EquipmentCard";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
 import { fetchEquipmentCategories, fetchEquipmentList } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES, site, whatsappLink } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import heroImage from "@/assests/header-banner.webp";
@@ -62,6 +63,7 @@ export const Route = createFileRoute("/equipment/")({
 function EquipmentIndex() {
   const scope = useScrollReveal<HTMLDivElement>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { category } = Route.useSearch();
   const [term, setTerm] = useState("");
   const [onlyAvailable, setOnlyAvailable] = useState(false);
@@ -72,6 +74,27 @@ function EquipmentIndex() {
     queryKey: ["equipment", "public"],
     queryFn: fetchEquipmentList,
   });
+
+  // Admins often edit prices/stock in the dashboard while the public site is
+  // open in a separate tab — that tab's query cache never hears about it, so
+  // it would otherwise keep showing stale data until the visitor reloads.
+  useEffect(() => {
+    const channel = supabase
+      .channel("equipment-index-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "equipment" },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["equipment", "public"],
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   const { data: categories } = useQuery({
     queryKey: ["equipment-categories"],
     queryFn: fetchEquipmentCategories,

@@ -197,6 +197,13 @@ export function EnquiryForm({ equipment }: { equipment?: Equipment | null }) {
   async function confirmAndSend() {
     if (!pendingValues) return;
     setSubmitting(true);
+    // Open the tab synchronously, inside the click handler, before any
+    // `await` — browsers drop the "user gesture" trust (and silently block
+    // the popup) once window.open() happens after an awaited async call.
+    const whatsappWindow =
+      contactMethod === "whatsapp"
+        ? window.open("", "_blank", "noreferrer")
+        : null;
     try {
       await createEnquiry({
         full_name: pendingValues.full_name,
@@ -225,7 +232,13 @@ export function EnquiryForm({ equipment }: { equipment?: Equipment | null }) {
 
       const message = buildMessage(pendingValues);
       if (contactMethod === "whatsapp") {
-        window.open(whatsappLink(message), "_blank", "noreferrer");
+        if (whatsappWindow) {
+          whatsappWindow.location.href = whatsappLink(message);
+        } else {
+          // Popup was blocked before we could even open a blank tab — try
+          // once more (may still be blocked, but better than nothing).
+          window.open(whatsappLink(message), "_blank", "noreferrer");
+        }
         toast.success("Enquiry logged — opening WhatsApp…");
       } else if (contactMethod === "email") {
         const subject = encodeURIComponent(
@@ -243,6 +256,7 @@ export function EnquiryForm({ equipment }: { equipment?: Equipment | null }) {
       setStartDate("");
       setEndDate("");
     } catch {
+      whatsappWindow?.close();
       toast.error(
         "Could not send your enquiry. Please call or WhatsApp us instead.",
       );

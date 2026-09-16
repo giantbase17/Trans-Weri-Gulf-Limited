@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CalendarRange,
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchEquipmentBySlug, fetchEquipmentImages } from "@/lib/db";
+import { supabase } from "@/integrations/supabase/client";
 import {
   categoryLabel,
   equipmentImageUrl,
@@ -51,11 +52,31 @@ export const Route = createFileRoute("/equipment/$slug")({
 function EquipmentDetail() {
   const { slug } = Route.useParams();
   const [active, setActive] = useState(0);
+  const queryClient = useQueryClient();
 
   const { data: item, isLoading } = useQuery({
     queryKey: ["equipment", slug],
     queryFn: () => fetchEquipmentBySlug(slug),
   });
+
+  // Keep this page's price/availability in sync when it's changed from the
+  // admin dashboard in another tab — see equipment.index.tsx for the same
+  // pattern.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`equipment-detail-live-${slug}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "equipment" },
+        () => {
+          void queryClient.invalidateQueries({ queryKey: ["equipment", slug] });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient, slug]);
 
   const { data: images = [] } = useQuery({
     queryKey: ["equipment-images", item?.id],
