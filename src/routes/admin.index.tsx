@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
+  Briefcase,
   CalendarClock,
   Check,
   CheckCircle2,
@@ -787,7 +788,7 @@ function Dashboard({
             className="h-16 w-fit max-w-[220px] rounded bg-background p-1.5 object-contain"
           />
           <div className="hidden lg:block">
-            <p className="mt-5 text-lg font-bold">Fleet control</p>
+            <p className="mt-5 text-lg font-bold">Business control</p>
             <p className="mt-1 text-xs text-primary-foreground/60">
               {preview ? "Preview mode · sample data" : auth.user?.email}
             </p>
@@ -807,7 +808,7 @@ function Dashboard({
         </div>
 
         <p className="hidden px-5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary-foreground/40 lg:block">
-          People <span className="mx-1.5">·</span> Equipment{" "}
+          People <span className="mx-1.5">·</span> Services{" "}
           <span className="mx-1.5">·</span> Progress
         </p>
 
@@ -893,13 +894,13 @@ function Dashboard({
               </p>
               <h1 className="mt-2 text-3xl sm:text-4xl">
                 {tab === "overview"
-                  ? "Fleet performance, at a glance."
+                  ? "Business performance, at a glance."
                   : tab.charAt(0).toUpperCase() + tab.slice(1)}
               </h1>
               {tab === "overview" && (
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Track your fleet, monitor availability and keep operations
-                  moving.
+                  Track demand across every service line, monitor your
+                  equipment fleet and keep operations moving.
                 </p>
               )}
             </div>
@@ -1100,6 +1101,22 @@ function Overview({
     ["quoted", "won", "lost"].includes(e.status),
   ).length;
 
+  const serviceLineCounts = useMemo(() => {
+    const counts = new Map<string, number>(
+      ALL_SERVICE_TYPES.map((type) => [type, 0]),
+    );
+    for (const e of enquiries) {
+      const type = e.service_type ?? "equipment_rental";
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    return ALL_SERVICE_TYPES.map((type) => ({
+      type,
+      label: serviceTypeLabel(type),
+      count: counts.get(type) ?? 0,
+    })).sort((a, b) => b.count - a.count);
+  }, [enquiries]);
+  const maxServiceCount = Math.max(1, ...serviceLineCounts.map((s) => s.count));
+
   const leadCards = [
     [
       "New today",
@@ -1137,11 +1154,14 @@ function Overview({
 
   return (
     <>
+      <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        Leads across every service line
+      </p>
       <motion.div
         variants={fadeUpContainer}
         initial="hidden"
         animate="show"
-        className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         {leadCards.map(([label, value, Icon, color, bg, filter]) => (
           <motion.button
@@ -1170,11 +1190,14 @@ function Overview({
           </motion.button>
         ))}
       </motion.div>
+      <p className="mt-8 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+        Equipment fleet
+      </p>
       <motion.div
         variants={fadeUpContainer}
         initial="hidden"
         animate="show"
-        className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+        className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         {cards.map(([label, value, Icon, color, bg]) => (
           <motion.div key={label} variants={fadeUpItem} whileHover={{ y: -3 }}>
@@ -1343,6 +1366,48 @@ function Overview({
             </CardContent>
           </Card>
         </div>
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.2, ease: "easeOut" }}
+        className="mt-6"
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>Enquiries by service line</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Where demand is coming from across all seven service lines —
+              not just equipment.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {serviceLineCounts.every((s) => s.count === 0) ? (
+              <p className="text-sm text-muted-foreground">
+                No enquiries yet across any service line.
+              </p>
+            ) : (
+              serviceLineCounts.map((s) => (
+                <div key={s.type} className="flex items-center gap-3 text-sm">
+                  <span className="w-44 shrink-0 truncate font-medium">
+                    {s.label}
+                  </span>
+                  <div className="h-2 flex-1 rounded-full bg-secondary">
+                    <div
+                      className="h-2 rounded-full bg-brand"
+                      style={{
+                        width: `${(s.count / maxServiceCount) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="w-8 shrink-0 text-right font-semibold">
+                    {s.count}
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
     </>
   );
@@ -3055,7 +3120,24 @@ const CHART_COLORS = {
   gold: "#d4a017",
   green: "#16a34a",
   steel: "#94a3b8",
+  teal: "#0d9488",
+  violet: "#7c3aed",
+  amber: "#f59e0b",
+  rose: "#e11d48",
 };
+
+/** Cycled to give each service line a distinct colour on the pie chart —
+ * there are 8 service types, more than the number of named brand colours. */
+const SERVICE_CHART_PALETTE = [
+  CHART_COLORS.royal,
+  CHART_COLORS.gold,
+  CHART_COLORS.green,
+  CHART_COLORS.teal,
+  CHART_COLORS.violet,
+  CHART_COLORS.amber,
+  CHART_COLORS.rose,
+  CHART_COLORS.steel,
+];
 
 const PIPELINE_STAGES = ["new", "contacted", "quoted", "won", "lost"] as const;
 
@@ -3106,6 +3188,22 @@ function AnalyticsPanel({
     ? Math.round((wonEnquiries.length / closedCount) * 100)
     : 0;
 
+  const serviceLineData = useMemo(() => {
+    const counts = new Map<string, number>(
+      ALL_SERVICE_TYPES.map((type) => [type, 0]),
+    );
+    for (const e of enquiries) {
+      const type = e.service_type ?? "equipment_rental";
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    }
+    return ALL_SERVICE_TYPES.map((type, index) => ({
+      name: serviceTypeLabel(type),
+      value: counts.get(type) ?? 0,
+      fill: SERVICE_CHART_PALETTE[index % SERVICE_CHART_PALETTE.length],
+    }));
+  }, [enquiries]);
+  const activeServiceLines = serviceLineData.filter((s) => s.value > 0).length;
+
   const kpis = [
     ["Total equipment", totalUnits, Package, CHART_COLORS.navy],
     ["Active rentals", activeRentals, Truck, CHART_COLORS.royal],
@@ -3116,6 +3214,12 @@ function AnalyticsPanel({
       CHART_COLORS.gold,
     ],
     ["Customers", customers.length, Users, CHART_COLORS.green],
+    [
+      "Active service lines",
+      `${activeServiceLines}/${ALL_SERVICE_TYPES.length}`,
+      Briefcase,
+      CHART_COLORS.teal,
+    ],
     ["Quotations", quotationsCount, FileText, CHART_COLORS.royal],
     ["Pending inquiries", pendingCount, Send, CHART_COLORS.gold],
     ["Maintenance requests", maintenanceUnits, Wrench, CHART_COLORS.steel],
@@ -3174,8 +3278,22 @@ function AnalyticsPanel({
         { Metric: "Pending inquiries", Value: pendingCount },
         { Metric: "Conversion rate (%)", Value: conversionRate },
         { Metric: "Customers", Value: customers.length },
+        {
+          Metric: "Active service lines",
+          Value: `${activeServiceLines}/${ALL_SERVICE_TYPES.length}`,
+        },
       ]),
       "Summary",
+    );
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(
+        serviceLineData.map((d) => ({
+          "Service line": d.name,
+          Enquiries: d.value,
+        })),
+      ),
+      "Enquiries by service line",
     );
     XLSX.utils.book_append_sheet(
       workbook,
@@ -3241,6 +3359,36 @@ function AnalyticsPanel({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              Enquiries by service line
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={serviceLineData.filter((d) => d.value > 0)}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={2}
+                >
+                  {serviceLineData
+                    .filter((d) => d.value > 0)
+                    .map((d) => (
+                      <Cell key={d.name} fill={d.fill} />
+                    ))}
+                </Pie>
+                <RechartsTooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Equipment by category</CardTitle>
