@@ -99,11 +99,13 @@ import {
   type UserProfile,
 } from "@/lib/db";
 import {
+  ALL_PERMISSIONS,
   ALL_ROLES,
   ALL_SERVICE_TYPES,
   CATEGORIES,
   ENQUIRY_STATUSES,
   ENQUIRY_STATUS_TRANSITIONS,
+  PERMISSION_LABELS,
   ROLE_PERMISSIONS,
   STATUSES,
   categoryLabel,
@@ -3683,6 +3685,49 @@ function UsersPanel({
           </CardContent>
         </Card>
       )}
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle>Roles &amp; permissions</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            What each role can do — assign roles to users in the table below.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-secondary text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Role</th>
+                  {ALL_PERMISSIONS.map((permission) => (
+                    <th key={permission} className="px-4 py-3 text-center">
+                      {PERMISSION_LABELS[permission]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ALL_ROLES.map((role) => (
+                  <tr key={role} className="border-t">
+                    <td className="px-4 py-3 font-semibold">
+                      {roleLabel(role)}
+                    </td>
+                    {ALL_PERMISSIONS.map((permission) => (
+                      <td key={permission} className="px-4 py-3 text-center">
+                        {ROLE_PERMISSIONS[role][permission] ? (
+                          <Check className="mx-auto h-4 w-4 text-field" />
+                        ) : (
+                          <X className="mx-auto h-4 w-4 text-muted-foreground/40" />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mt-5">
         <CardHeader>
