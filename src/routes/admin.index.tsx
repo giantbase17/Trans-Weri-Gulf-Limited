@@ -775,7 +775,7 @@ function Dashboard({
         className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden"
       >
         <img
-          src={settings.data?.logo_url ?? site.logo}
+          src={site.watermark}
           alt=""
           className="w-[90vw] max-w-3xl opacity-[0.035] sm:w-[55vw]"
         />

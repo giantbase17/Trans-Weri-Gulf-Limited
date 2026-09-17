@@ -1,4 +1,5 @@
 import logoAsset from "@/assests/company-logo.webp";
+import watermarkAsset from "@/assests/company-logo-watermark.webp";
 
 export const site = {
   name: "Trans Weri Gulf Limited",
@@ -15,6 +16,10 @@ export const site = {
   instagram:
     "https://www.instagram.com/transwerigulflimited?igsi=Mm91M3V5ZDJ4NDV1",
   logo: logoAsset,
+  // The rebranded mark — kept for the faint background watermark only,
+  // while `logo` (the pre-rebrand mark) stays the one actually displayed
+  // in the navbar, footer and admin dashboard.
+  watermark: watermarkAsset,
 } as const;
 
 export const CATEGORIES = [
