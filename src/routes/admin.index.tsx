@@ -56,6 +56,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
+import { useIdleLogout } from "@/hooks/useIdleLogout";
 import {
   addEquipmentCategory,
   deleteEquipmentCategory,
@@ -132,6 +133,8 @@ export const Route = createFileRoute("/admin/")({
 });
 
 type Tab = "overview" | "equipment" | "enquiries" | "customers" | "analytics" | "users" | "content";
+
+const IDLE_LOGOUT_MS = 30 * 60 * 1000;
 
 const emptyEquipment: Partial<Equipment> = {
   name: "",
@@ -642,6 +645,15 @@ function Dashboard({
   const [enquiryQuickFilter, setEnquiryQuickFilter] =
     useState<EnquiryQuickFilter>("all");
   const queryClient = useQueryClient();
+
+  useIdleLogout(
+    () => {
+      toast.info("Signed out after 30 minutes of inactivity.");
+      void auth.signOut();
+    },
+    IDLE_LOGOUT_MS,
+    { enabled: !preview },
+  );
 
   function goToEnquiries(filter: EnquiryQuickFilter = "all") {
     setEnquiryQuickFilter(filter);
