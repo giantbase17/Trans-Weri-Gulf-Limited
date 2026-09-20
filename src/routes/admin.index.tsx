@@ -56,6 +56,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
+import { useIdleLogout } from "@/hooks/useIdleLogout";
 import {
   addEquipmentCategory,
   deleteEquipmentCategory,
@@ -98,11 +99,13 @@ import {
   type UserProfile,
 } from "@/lib/db";
 import {
+  ALL_PERMISSIONS,
   ALL_ROLES,
   ALL_SERVICE_TYPES,
   CATEGORIES,
   ENQUIRY_STATUSES,
   ENQUIRY_STATUS_TRANSITIONS,
+  PERMISSION_LABELS,
   ROLE_PERMISSIONS,
   STATUSES,
   categoryLabel,
@@ -132,6 +135,8 @@ export const Route = createFileRoute("/admin/")({
 });
 
 type Tab = "overview" | "equipment" | "enquiries" | "customers" | "analytics" | "users" | "content";
+
+const IDLE_LOGOUT_MS = 30 * 60 * 1000;
 
 const emptyEquipment: Partial<Equipment> = {
   name: "",
@@ -642,6 +647,15 @@ function Dashboard({
   const [enquiryQuickFilter, setEnquiryQuickFilter] =
     useState<EnquiryQuickFilter>("all");
   const queryClient = useQueryClient();
+
+  useIdleLogout(
+    () => {
+      toast.info("Signed out after 30 minutes of inactivity.");
+      void auth.signOut();
+    },
+    IDLE_LOGOUT_MS,
+    { enabled: !preview },
+  );
 
   function goToEnquiries(filter: EnquiryQuickFilter = "all") {
     setEnquiryQuickFilter(filter);
@@ -3671,6 +3685,49 @@ function UsersPanel({
           </CardContent>
         </Card>
       )}
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle>Roles &amp; permissions</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            What each role can do — assign roles to users in the table below.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-secondary text-xs uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Role</th>
+                  {ALL_PERMISSIONS.map((permission) => (
+                    <th key={permission} className="px-4 py-3 text-center">
+                      {PERMISSION_LABELS[permission]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ALL_ROLES.map((role) => (
+                  <tr key={role} className="border-t">
+                    <td className="px-4 py-3 font-semibold">
+                      {roleLabel(role)}
+                    </td>
+                    {ALL_PERMISSIONS.map((permission) => (
+                      <td key={permission} className="px-4 py-3 text-center">
+                        {ROLE_PERMISSIONS[role][permission] ? (
+                          <Check className="mx-auto h-4 w-4 text-field" />
+                        ) : (
+                          <X className="mx-auto h-4 w-4 text-muted-foreground/40" />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mt-5">
         <CardHeader>

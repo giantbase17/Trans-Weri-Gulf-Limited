@@ -116,6 +116,22 @@ export const ROLE_PERMISSIONS = {
 } as const;
 
 export type Role = keyof typeof ROLE_PERMISSIONS;
+export type Permission = keyof (typeof ROLE_PERMISSIONS)["admin"];
+
+/** Column headers for the roles-and-permissions legend on the Users & Roles
+ * tab — one entry per key in ROLE_PERMISSIONS, in display order. */
+export const PERMISSION_LABELS: Record<Permission, string> = {
+  canManageUsers: "Manage users",
+  canManageEquipment: "Manage equipment",
+  canManageEnquiries: "Manage enquiries",
+  canManageCustomers: "Manage customers",
+  canManageContent: "Manage content",
+  canViewAll: "View all",
+};
+
+export const ALL_PERMISSIONS = Object.keys(
+  PERMISSION_LABELS,
+) as Permission[];
 
 /** Every assignable role, in display order — the "Create user" role picker
  * and the per-user role-toggle grid both iterate this. */
