@@ -10,61 +10,46 @@ const ACTIVITY_EVENTS = [
 ] as const;
 
 // Collapses activity handling to once per window so a mousemove/scroll
-// stream doesn't hit localStorage on every event.
+// stream doesn't restart the timer on every single event.
 const THROTTLE_MS = 5_000;
 
 /**
  * Calls `onIdle` once the user has gone `timeoutMs` without mouse, keyboard,
- * touch or scroll activity. The last-activity timestamp is persisted to
- * localStorage (shared across tabs on the same origin) so closing the tab
- * and reopening it later — or another tab of the same dashboard — counts
- * toward the same idle clock rather than resetting on every mount.
+ * touch or scroll activity. The clock starts fresh on every mount — a login
+ * (which is what mounts this) is itself proof of activity, so it must never
+ * be compared against activity recorded before a prior sign-out. Concretely:
+ * don't persist the last-activity timestamp across mounts/sign-outs, or a
+ * sign-out that happens to be stale by the time of the next login will
+ * immediately sign the user straight back out.
  */
 export function useIdleLogout(
   onIdle: () => void,
   timeoutMs: number,
-  options: { enabled?: boolean; storageKey?: string } = {},
+  options: { enabled?: boolean } = {},
 ) {
-  const { enabled = true, storageKey = "twg-admin-last-active" } = options;
+  const { enabled = true } = options;
   const onIdleRef = useRef(onIdle);
   onIdleRef.current = onIdle;
 
   useEffect(() => {
     if (!enabled) return;
 
-    function readLastActive(): number {
-      const parsed = Number(localStorage.getItem(storageKey));
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : Date.now();
-    }
-
     let timer: ReturnType<typeof setTimeout>;
     let lastHandled = 0;
 
-    function scheduleFromLastActive() {
+    function reset() {
       clearTimeout(timer);
-      const remaining = timeoutMs - (Date.now() - readLastActive());
-      if (remaining <= 0) {
-        onIdleRef.current();
-        return;
-      }
-      timer = setTimeout(scheduleFromLastActive, remaining);
+      timer = setTimeout(() => onIdleRef.current(), timeoutMs);
     }
 
     function handleActivity() {
       const now = Date.now();
       if (now - lastHandled < THROTTLE_MS) return;
       lastHandled = now;
-      localStorage.setItem(storageKey, String(now));
-      scheduleFromLastActive();
+      reset();
     }
 
-    if (Date.now() - readLastActive() >= timeoutMs) {
-      onIdleRef.current();
-      return;
-    }
-
-    localStorage.setItem(storageKey, String(Date.now()));
-    scheduleFromLastActive();
+    reset();
 
     for (const event of ACTIVITY_EVENTS) {
       window.addEventListener(event, handleActivity, { passive: true });
@@ -76,5 +61,5 @@ export function useIdleLogout(
         window.removeEventListener(event, handleActivity);
       }
     };
-  }, [enabled, timeoutMs, storageKey]);
+  }, [enabled, timeoutMs]);
 }
