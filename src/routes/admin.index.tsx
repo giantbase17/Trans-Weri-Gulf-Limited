@@ -994,6 +994,7 @@ function Dashboard({
                 <UsersPanel
                   users={users.data ?? []}
                   currentUser={auth.user?.id}
+                  viewerIsSuperAdmin={auth.roles.includes("super_admin")}
                   onSaved={() => {
                     void queryClient.invalidateQueries({
                       queryKey: ["users", "admin"],
@@ -1001,7 +1002,7 @@ function Dashboard({
                   }}
                 />
               )}
-              {tab === "content" && (
+              {tab === "content" && permissions.canManageContent && (
                 <ContentPanel
                   settings={settings.data}
                   posts={posts.data ?? []}
@@ -3518,10 +3519,12 @@ function AnalyticsPanel({
 function UsersPanel({
   users,
   currentUser,
+  viewerIsSuperAdmin = false,
   onSaved,
 }: {
   users: UserProfile[];
   currentUser?: string | undefined;
+  viewerIsSuperAdmin?: boolean;
   onSaved: () => void;
 }) {
   const [showAddUser, setShowAddUser] = useState(false);
@@ -3536,6 +3539,18 @@ function UsersPanel({
     role: string;
     hasRole: boolean;
   } | null>(null);
+
+  // An admin (not super_admin) never sees that super_admin exists — not in
+  // the role picker, the permissions legend, or the user list. Enforced
+  // again at the database level (see the super_admin_content_and_visibility
+  // migration); this is the matching UI so admins don't even see a row for
+  // an account they couldn't act on anyway.
+  const visibleRoles = viewerIsSuperAdmin
+    ? ALL_ROLES
+    : ALL_ROLES.filter((role) => role !== "super_admin");
+  const visibleUsers = viewerIsSuperAdmin
+    ? users
+    : users.filter((user) => !user.roles.includes("super_admin"));
 
   async function addUser() {
     if (!newUserEmail || !newUserPassword) {
@@ -3662,7 +3677,7 @@ function UsersPanel({
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value as any)}
                 >
-                  {ALL_ROLES.map((role) => (
+                  {visibleRoles.map((role) => (
                     <option key={role} value={role}>
                       {roleLabel(role)}
                     </option>
@@ -3707,7 +3722,7 @@ function UsersPanel({
                 </tr>
               </thead>
               <tbody>
-                {ALL_ROLES.map((role) => (
+                {visibleRoles.map((role) => (
                   <tr key={role} className="border-t">
                     <td className="px-4 py-3 font-semibold">
                       {roleLabel(role)}
@@ -3758,7 +3773,7 @@ function UsersPanel({
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {visibleUsers.map((user) => (
                   <tr key={user.id} className="border-t">
                     <td className="px-4 py-4">
                       <p className="font-semibold">{user.full_name || "No name"}</p>
@@ -3782,7 +3797,7 @@ function UsersPanel({
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {ALL_ROLES.map((role) => (
+                        {visibleRoles.map((role) => (
                           <Button
                             key={role}
                             size="sm"
@@ -3825,7 +3840,7 @@ function UsersPanel({
                     </td>
                   </tr>
                 ))}
-                {!users.length && (
+                {!visibleUsers.length && (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                       No users found. Create the first user to get started.
