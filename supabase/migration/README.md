@@ -38,7 +38,7 @@ someone wrote it, not that it ran.
 | 22 | `20260916190000_enquiry_service_type.sql` | Adds `service_type` to `enquiries` (Enquiry form service picker) | ✅ |
 | 23 | `20260916200000_rls_audit_fixes.sql` | **Fix**: re-asserts `site_settings` policies, adds the previously-missing `site-assets` storage DELETE policy | ✅ |
 | 24 | `20260917000000_correct_business_address.sql` | **Fix**: corrects the address to No. 3 Okaka Estate, Yenagoa (#21 had wrongly changed it to Ekeki Housing Estate) | ⬜ |
-| 25 | `20260921000000_super_admin_content_and_visibility.sql` | Site content (`site_settings`/`site_posts`/`site-assets`) write access becomes super_admin-only; `profiles`/`user_roles` reads and the `admin_assign_role`/`admin_remove_role`/`admin_delete_user` RPCs hide super_admin accounts from admin-tier callers who aren't themselves super_admin | ⬜ **run this one next** |
+| 25 | `20260921000000_super_admin_content_and_visibility.sql` | Site content (`site_settings`/`site_posts`/`site-assets`) write access becomes super_admin-only; `profiles`/`user_roles` reads and the `admin_assign_role`/`admin_remove_role`/`admin_delete_user` RPCs hide super_admin accounts from admin-tier callers who aren't themselves super_admin | ✅ |
 
 ## Why fixes get their own file instead of editing the original
 
