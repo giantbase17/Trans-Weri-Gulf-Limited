@@ -25,12 +25,12 @@ LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $blind$
   SELECT
     public.has_role(auth.uid(), 'admin')
     AND NOT public.has_role(auth.uid(), 'super_admin')
     AND public.has_role(_target_user_id, 'super_admin');
-$$;
+$blind$;
 
 -- profiles / user_roles: super_admin sees everyone; admin sees everyone
 -- except accounts holding the super_admin role.
@@ -89,7 +89,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $assign_role$
 DECLARE
   profile_exists integer;
 BEGIN
@@ -116,7 +116,7 @@ BEGIN
 
   RETURN true;
 END;
-$$;
+$assign_role$;
 
 CREATE OR REPLACE FUNCTION public.admin_remove_role(
   target_user_id uuid,
@@ -126,7 +126,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $remove_role$
 BEGIN
   IF NOT public.is_admin_tier(auth.uid()) THEN
     RAISE EXCEPTION 'Only admins can remove roles';
@@ -141,7 +141,7 @@ BEGIN
 
   RETURN true;
 END;
-$$;
+$remove_role$;
 
 CREATE OR REPLACE FUNCTION public.admin_delete_user(
   target_user_id uuid
@@ -150,7 +150,7 @@ RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $$
+AS $delete_user$
 DECLARE
   role_count integer;
 BEGIN
@@ -176,4 +176,4 @@ BEGIN
 
   RETURN true;
 END;
-$$;
+$delete_user$;
