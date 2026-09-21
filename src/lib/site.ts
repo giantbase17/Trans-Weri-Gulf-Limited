@@ -63,12 +63,17 @@ export const ENQUIRY_STATUS_TRANSITIONS: Record<string, string[]> = {
 };
 
 export const ROLE_PERMISSIONS = {
+  // canManageContent is deliberately false here — site content (hero pages,
+  // news/blog/incoming write-ups and their images) is super_admin-only, the
+  // one capability that actually separates the two top tiers. Enforced at
+  // the database level too (see the super_admin_content_and_visibility
+  // migration) so it isn't just a hidden tab.
   admin: {
     canManageUsers: true,
     canManageEquipment: true,
     canManageEnquiries: true,
     canManageCustomers: true,
-    canManageContent: true,
+    canManageContent: false,
     canViewAll: true,
   },
   manager: {

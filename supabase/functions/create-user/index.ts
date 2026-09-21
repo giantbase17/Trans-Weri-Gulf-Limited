@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
     if (!callerRoles || callerRoles.length === 0) {
       return json({ error: "Only admins can create users" }, 403);
     }
+    const callerIsSuperAdmin = callerRoles.some((r) => r.role === "super_admin");
 
     const payload = (await req.json()) as CreateUserPayload;
     if (!payload.email || !payload.password || !payload.role) {
@@ -81,6 +82,12 @@ Deno.serve(async (req) => {
     }
     if (!VALID_ROLES.includes(payload.role)) {
       return json({ error: "Invalid role" }, 400);
+    }
+    if (payload.role === "super_admin" && !callerIsSuperAdmin) {
+      return json(
+        { error: "Only a super admin can create a super admin account" },
+        403,
+      );
     }
 
     const { data: created, error: createError } =
