@@ -576,6 +576,32 @@ export async function createUserAccount(params: {
   }
 }
 
+/**
+ * Sets a new password for another admin-dashboard user. Only callable by
+ * admin/super_admin (enforced server-side, same as createUserAccount) — the
+ * Auth Admin API this needs requires the service role key, so it has to go
+ * through an edge function rather than a direct client call.
+ */
+export async function resetUserPassword(targetUserId: string, newPassword: string) {
+  const { error } = await supabase.functions.invoke("admin-reset-password", {
+    body: { targetUserId, newPassword },
+  });
+  if (error) {
+    const context = (error as { context?: Response }).context;
+    let detail: string | undefined;
+    if (context && typeof context.clone === "function") {
+      try {
+        const body = await context.clone().json();
+        const candidate = body?.error ?? body?.msg ?? body?.message;
+        if (typeof candidate === "string") detail = candidate;
+      } catch {
+        // response body wasn't JSON; fall back to the generic message
+      }
+    }
+    throw new Error(detail ?? error.message);
+  }
+}
+
 export async function updateUserProfile(userId: string, updates: Partial<UserProfile>) {
   const { error } = await sb
     .from("profiles")

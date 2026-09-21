@@ -81,6 +81,7 @@ import {
   createUserAccount,
   removeEquipmentImage,
   removeRole,
+  resetUserPassword,
   saveEquipment,
   saveSitePost,
   saveSiteSettings,
@@ -126,6 +127,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AuthShell } from "@/components/site/AuthShell";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ContentPanel } from "@/components/site/ContentPanel";
 import { cn, getErrorMessage, getSiteUrl } from "@/lib/utils";
 
@@ -3539,6 +3548,9 @@ function UsersPanel({
     role: string;
     hasRole: boolean;
   } | null>(null);
+  const [pendingPasswordReset, setPendingPasswordReset] = useState<UserProfile | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState("");
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   // An admin (not super_admin) never sees that super_admin exists — not in
   // the role picker, the permissions legend, or the user list. Enforced
@@ -3617,6 +3629,27 @@ function UsersPanel({
       toast.error(
         error instanceof Error ? error.message : "Could not delete user",
       );
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!pendingPasswordReset) return;
+    if (resetPasswordValue.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      await resetUserPassword(pendingPasswordReset.id, resetPasswordValue);
+      toast.success(
+        `Password changed for ${pendingPasswordReset.full_name || pendingPasswordReset.email}`,
+      );
+      setPendingPasswordReset(null);
+      setResetPasswordValue("");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Could not reset password"));
+    } finally {
+      setResettingPassword(false);
     }
   }
 
@@ -3769,6 +3802,7 @@ function UsersPanel({
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Roles</th>
                   <th className="px-4 py-3">Actions</th>
+                  <th className="px-4 py-3">Password</th>
                   <th className="px-4 py-3">Delete</th>
                 </tr>
               </thead>
@@ -3827,6 +3861,18 @@ function UsersPanel({
                       </div>
                     </td>
                     <td className="px-4 py-4">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setPendingPasswordReset(user);
+                          setResetPasswordValue("");
+                        }}
+                      >
+                        <Lock className="h-4 w-4" /> Reset
+                      </Button>
+                    </td>
+                    <td className="px-4 py-4">
                       {user.id !== currentUser && (
                         <Button
                           size="sm"
@@ -3842,7 +3888,7 @@ function UsersPanel({
                 ))}
                 {!visibleUsers.length && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                       No users found. Create the first user to get started.
                     </td>
                   </tr>
@@ -3887,6 +3933,61 @@ function UsersPanel({
           }
         }}
       />
+      <Dialog
+        open={!!pendingPasswordReset}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingPasswordReset(null);
+            setResetPasswordValue("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Reset password for{" "}
+              {pendingPasswordReset?.full_name || pendingPasswordReset?.email}
+            </DialogTitle>
+            <DialogDescription>
+              They&apos;ll need to sign in with this new password right away —
+              share it with them directly.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleResetPassword();
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="reset_password_value">New password</Label>
+              <Input
+                id="reset_password_value"
+                type="text"
+                value={resetPasswordValue}
+                onChange={(e) => setResetPasswordValue(e.target.value)}
+                minLength={8}
+                placeholder="At least 8 characters"
+                required
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPendingPasswordReset(null)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="gold" disabled={resettingPassword}>
+                {resettingPassword ? "Changing..." : "Change password"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
